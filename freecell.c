@@ -1,42 +1,77 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #define SPADE 0
 #define CLUB 16
 #define HEART 32
 #define DIAMOND 48
 
+typedef Card uint8_t;
 
-static char fcslots[4];
-static char fdslots[4];
-static char columns[8][20];
+typedef struct {
+	Card fc_slots[4];       // freecells
 
-char blankcard =  0b01111111;
-char colormask =  0b00100000;  // 0 black, 1 red
-char symbolmask = 0b00110000;  // 0 spade, 1 club, 2 heart, 3 diamond
-char valuemask =  0b00001111;  // 1 ace, 2 two, ..., 10 ten, ..., 13 king
+	Card fd_slots[4][14];   // foundation
+	int fd_slots_top[4];    // index of card on top of each foundation slot
 
-void board_clear() {
+	Card columns[8][20];    // columns
+	int columns_bot[8];     // index of card on bottom of each column
+} Board;
+
+
+void coltocol(Board *board, int fromcol, int tocol) {
+
+	int fromrow, torow;
+	Card fromcard, tocard;
+
+	fromrow = board->columns_bot[fromcol];
+	torow = board->columns_bot[tocol];
+
+	if (fromrow == -1) return;
+	fromcard = board->columns[fromcol][fromrow];
+
+	if (torow >= 0) {
+		tocard = board->columns[tocol][torow];
+		if (fromcard & colormask == tocard && colormask) return;
+		if (fromcard & valuemask != tocard && valuemask - 1) return;
+	}
+}
+
+
+
+uint8_t placeholder = 0b01000000;
+uint8_t blankcard   = 0b01000001;
+uint8_t colormask   = 0b00100000;  // 0 black, 1 red
+uint8_t symbolmask  = 0b00110000;  // 0 spade, 1 club, 2 heart, 3 diamond
+uint8_t valuemask   = 0b00001111;  // 1 ace, 2 two, ..., 10 ten, ..., 13 king
+
+void board_clear(Board *board) {
 	int row, col;
 
-	for (col = 0; col < 8; col++) {
-		fcslots[col] = blankcard;
+	for (col = 0; col < 4; col++) {
+		board->fc_slots[col] = placeholder;
+	}
+
+	for (col = 0; col < 4; col++) {
+		board->fd_slots[col][0] = placeholder;
+		board->fd_slots_top[col] = &(board->fd_slots[col]);
+		for (row = 1; row < 14; row++) {
+			board->fd_slots[col][row] = blankcard;
+		}
 	}
 
 	for (col = 0; col < 8; col++) {
-		fdslots[col] = blankcard;
-	}
-
-	for (row = 0; row < 20; row++) {
-		for (col = 0; col < 8; col++) {
-			columns[row][col] = blankcard;
+		board->columns_bot[col] = NULL;
+		for (row = 0; row < 20; row++) {
+			board->columns[col][row] = blankcard;
 		}
 	}
 }
 
-void board_init() {
-	char fulldeck[52];
-	char value, symbol;
+void board_init(Board *board) {
+	uint8_t fulldeck[52];
+	uint8_t value, symbol;
 	int row, col;
 
 	for (symbol = 0; symbol < 4; symbol++) {
@@ -45,20 +80,30 @@ void board_init() {
 		}
 	}
 
+	//shuffle(fulldeck);
+
 	for (row = 0; row < 6; row++) {
 		for (col = 0; col < 8; col++) {
-			columns[row][col] = fulldeck[row * 8 + col];
+			board->columns[row][col] = fulldeck[row * 8 + col];
 		}
 	}
-	columns[6][0] = fulldeck[48];
-	columns[6][1] = fulldeck[49];
-	columns[6][2] = fulldeck[50];
-	columns[6][3] = fulldeck[51];
+	for (col = 0; col < 4; col++) {
+		board->columns[6][col] = fulldeck[48 + col];
+		board->columns_bot[6] = &(board->columns[6][col]);
+	}
+	for (; col < 8; col++) {
+		board->columns_bot[5] = &(board->columns[5][col]);
+	}
 }
 
-void card_str(char card, char * str) {
+void card_str(uint8_t card, char *str) {
 	if (card == blankcard) {
 		str[0] = str[1] = str[2] = ' ';
+		return;
+	}
+	if (card == placeholder) {
+		str[0] = str[2] = ' ';
+		str[1] = '_';
 		return;
 	}
 	str[0] = ' ';
@@ -77,24 +122,24 @@ void card_str(char card, char * str) {
 	}
 }
 
-void board_show() {
+void board_show(Board *board) {
 	int row, col;
 	char str[4];
 	str[3] = 0;
 
 	for (col = 0; col < 4; col++) {
-		card_str(fcslots[col], str);
+		card_str(board->fc_slots[col], str);
 		printf("%s ", str);
 	}
 	printf("|");
 	for (col = 0; col < 4; col++) {
-		card_str(fdslots[col], str);
+		card_str(board->fd_slots[col][board->fd_slots_i[col]], str);
 		printf(" %s", str);
 	}
 	printf("\n---------------------------------\n");
 	for (row = 0; row < 20; row++) {
 		for (col = 0; col < 8; col++) {
-			card_str(columns[row][col], str);
+			card_str(board->columns[row][col], str);
 			printf(" %s", str);
 		}
 		printf("\n");
@@ -104,8 +149,9 @@ void board_show() {
 
 
 int main(void) {
-	board_clear();
-	board_init();
-	board_show();
+	Board board;
+	board_clear(&board);
+	board_init(&board);
+	board_show(&board);
 	return 0;
 }
