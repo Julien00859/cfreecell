@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 typedef struct card {
 	unsigned int color:1;
@@ -15,25 +16,24 @@ typedef struct card {
 
 typedef struct board {
 	Card freecell[4];
-
 	Card foundation[4][14];
-	uint8_t fdlen[4];
-
 	Card columns[8][21];
+	uint8_t fdlen[4];
 	uint8_t collen[8];
 } Board;
 
 
-bool validate_move(Card cardfrom, Card cardto) {
-	if (cardfrom.value == 0)
-		return false;
-	if (cardto.value == 0)
-		return true;
-	if (cardfrom.color == cardto.color)
-		return false;
-	if (cardfrom.value != cardto.value + 1)
-		return false;
-	return true;
+void shuffle(Card *deck, int len) {
+	int i, r;
+	Card tmp;
+
+	srand(time(0));
+	for (i = 0; i < len; i++) {
+		r = rand() % len;
+		tmp = deck[i];
+		deck[i] = deck[r];
+		deck[r] = tmp;
+	}
 }
 
 
@@ -44,6 +44,13 @@ void board_init(Board *board) {
 	Card newcard;
 
 	memset(board, 0, sizeof *board);
+
+	for (col = 0; col < 4; col++) {
+		newcard.color = col / 2;
+		newcard.symbol = col % 2;
+		newcard.value = 0;
+		board->foundation[col][0] = newcard;
+	}
 
 	for (color = 0; color < 2; color++) {
 		for (symbol = 0; symbol < 2; symbol++) {
@@ -56,7 +63,7 @@ void board_init(Board *board) {
 		}
 	}
 
-	// shuffle(deck, 52)
+	shuffle(deck, 52);
 
 	for (row = 0; row < 6; row++) {
 		for (col = 0; col < 8; col++) {
@@ -122,9 +129,95 @@ void board_show(Board *board) {
 }
 
 
+bool validate_move(Card fromcard, Card tocard, char destination) {
+	if (fromcard.value == 0)
+		return false;
+
+	switch (destination) {
+		case 'l':
+			return tocard.value == 0;
+		case 'f':
+			return (
+				fromcard.symbol == tocard.symbol
+				&& fromcard.value == tocard.value + 1
+			);
+		case 'c':
+			return (
+				tocard.value == 0
+				|| (
+					fromcard.color != tocard.color
+					&& fromcard.value == tocard.value - 1
+				)
+			);
+		default:
+			exit(1);
+	}
+}
+
+
+bool printmove(Card fromcard, Card tocard, char dest) {
+	char str[] = " _  >  _ ";
+	if (validate_move(fromcard, tocard, dest)) {
+		card_str(fromcard, str);
+		card_str(tocard, str+6);
+		printf("%s\n", str);
+		return true;
+	}
+	return false;
+}
+
+
+void listmoves(Board *board) {
+	int fromcol, tocol, symbol;
+	Card fromcard, tocard;
+
+	// From freecell...
+	for (fromcol = 0; fromcol < 4; fromcol++) {
+		fromcard = board->freecell[fromcol];
+
+		// ...to foundation
+		symbol = fromcard.color * 2 + fromcard.symbol;
+		tocard = board->foundation[symbol][board->fdlen[symbol] - 1];
+		printmove(fromcard, tocard, 'f');
+
+		// ...to column
+		for (tocol = 0; tocol < 8; tocol++) {
+			tocard = board->columns[tocol][board->collen[tocol] - 1];
+			printmove(fromcard, tocard, 'c');
+		}
+	}
+
+	// From column...
+	for (fromcol = 0; fromcol < 8; fromcol++) {
+		fromcard = board->columns[fromcol][board->collen[fromcol] - 1];
+
+		// ...to freecell
+		for (tocol = 0; tocol < 4; tocol++) {
+			tocard = board->freecell[tocol];
+			if (printmove(fromcard, tocard, 'l'))
+				break;
+		}
+
+		// ...to foundation
+		symbol = fromcard.color * 2 + fromcard.symbol;
+		tocard = board->foundation[symbol][board->fdlen[symbol] - 1];
+		printmove(fromcard, tocard, 'f');
+
+		// ...to column
+		for (tocol = 0; tocol < 8; tocol++) {
+			if (fromcol == tocol)
+				continue;
+			tocard = board->columns[tocol][board->collen[tocol] - 1];
+			printmove(fromcard, tocard, 'c');
+		}
+	}
+}
+
+
 int main(void) {
 	Board board;
 	board_init(&board);
 	board_show(&board);
+	listmoves(&board);
 	return 0;
 }
