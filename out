@@ -1,0 +1,62 @@
+                |                
+---------------------------------
+  QS  9S  3D  4C  6S  4S  1C  4D
+  7S  2H  3H  6D  9H  KH  9D 10C
+  2C  8H  6C  8D  5D  JC  5C  1H
+  1S  6H  5S  7H  5H  3S  JH 10H
+  7D  QH  8C 10S  8S  JD  KC  4H
+ 10D  QC  3C  KD  KS  2D  7C  2S
+  1D  QD  JS  9C                
+                                
+                                
+List possible moves:
+ 1D >    
+ 1D >  2S
+ QD >    
+ QD >  KS
+ JS >    
+ JS >  QD
+ 9C >    
+ KS >    
+ 2D >    
+ 7C >    
+ 2S >    
+
+Play  JS on  QD
+
+                |                
+---------------------------------
+  QS  9S  3D  4C  6S  4S  1C  4D
+  7S  2H  3H  6D  9H  KH  9D 10C
+  2C  8H  6C  8D  5D  JC  5C  1H
+  1S  6H  5S  7H  5H  3S  JH 10H
+  7D  QH  8C 10S  8S  JD  KC  4H
+ 10D  QC  3C  KD  KS  2D  7C  2S
+  1D  QD      9C                
+      JS                        
+                                
+List possible moves:
+ 1D >    
+ 1D >  2S
+ JS >    
+ 3C >    
+ 9C >    
+ KS >    
+ 2D >    
+ 2D >  3C
+ 7C >    
+ 2S >    
+
+Play  2D on  3C
+
+                |                
+---------------------------------
+  QS  9S  3D  4C  6S  4S  1C  4D
+  7S  2H  3H  6D  9H  KH  9D 10C
+  2C  8H  6C  8D  5D  JC  5C  1H
+  1S  6H  5S  7H  5H  3S  JH 10H
+  7D  QH  8C 10S  8S  JD  KC  4H
+ 10D  QC  3C  KD  KS      7C  2S
+  1D  QD  2D  9C                
+      JS                        
+                                
