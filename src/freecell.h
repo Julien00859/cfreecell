@@ -1,7 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "stack.h"
-#include "hashset.h"
+#include "treeset.h"
+#include "xxhash.h"
 
 #define MAXFDLEN 14
 #define MAXCOLEN 21
@@ -28,5 +29,5 @@ void card_str(Card card, char *str);
 bool validate_move(Card fromcard, Card tocard, char destination);
 void listmoves(Board *board, Stack * nextmoves);
 void play(Board *board, Card *card1, Card *card2);
-bool explore(Board *board, HashSet *visited_boards);
-size_t hash(const void *key, int l, uint32_t seed);
+bool explore(Board *board, TreeSet *visited_boards, int depth);
+int board_comp(const void * ptr_h1, const void * ptr_h2);

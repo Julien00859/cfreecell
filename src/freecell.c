@@ -7,11 +7,12 @@
 #include <time.h>
 #include "xxhash.h"
 #include "stack.h"
-#include "hashset.h"
+#include "treeset.h"
 #include "freecell.h"
 
 
 static Card nullcard;
+static char str[4];
 
 void shuffle(Card *deck, int len) {
 	int i, r;
@@ -33,6 +34,11 @@ void board_init(Board *board) {
 	Card deck[52];
 	Card newcard;
 
+	nullcard.value = 0;
+	nullcard.symbol = 0;
+	nullcard.color = 0;
+	nullcard._padding = 0;
+
 	memset(board, 0, sizeof(Board));
 
 	// Init foundation
@@ -51,6 +57,7 @@ void board_init(Board *board) {
 				newcard.color = color;
 				newcard.symbol = symbol;
 				newcard.value = value;
+				newcard._padding = 0;
 				deck[(color * 2 + symbol) * 13 + value - 1] = newcard;
 			}
 		}
@@ -71,11 +78,11 @@ void board_init(Board *board) {
 		board->colen[col] = 6;
 	}
 
-	/*for (row = 8; row < MAXCOLEN; row++) {
+	for (row = 8; row < MAXCOLEN; row++) {
 		for (col = 0; col < 8; col++) {
 			board->columns[col][row] = nullcard;
 		}
-	}*/
+	}
 }
 
 
@@ -115,7 +122,6 @@ void card_str(Card card, char *str) {
 
 void board_show(Board *board) {
 	int row, col;
-	char str[4];
 	str[3] = 0;
 
 	for (col = 0; col < 4; col++) {
@@ -124,11 +130,11 @@ void board_show(Board *board) {
 	}
 	printf("|");
 	for (col = 0; col < 4; col++) {
-		card_str(board->foundation[col][board->fdlen[col]], str);
+		card_str(board->foundation[col][board->fdlen[col]-1], str);
 		printf(" %s", str);
 	}
 	printf("\n---------------------------------\n");
-	for (row = 0; row < 9; row++) {
+	for (row = 0; row < MAXCOLEN; row++) {
 		for (col = 0; col < 8; col++) {
 			card_str(board->columns[col][row], str);
 			printf(" %s", str);
@@ -163,6 +169,7 @@ bool validate_move(Card fromcard, Card tocard, char destination) {
 	}
 }
 
+
 void listmoves(Board *board, Stack * nextmoves) {
 	int fromcol, tocol, symbol;
 	Card *fromcard, *tocard;
@@ -176,7 +183,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
 		if (validate_move(*fromcard, *tocard, 'f')) {
 			stack_push(nextmoves, fromcard);
-			stack_push(nextmoves, tocard);
+			stack_push(nextmoves, tocard + 1);
 		}
 
 		// ...to column
@@ -184,7 +191,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
 			if (validate_move(*fromcard, *tocard, 'c')) {
 				stack_push(nextmoves, fromcard);
-				stack_push(nextmoves, tocard);
+				stack_push(nextmoves, tocard + 1);
 			}
 		}
 	}
@@ -208,7 +215,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
 		if (validate_move(*fromcard, *tocard, 'f')) {
 			stack_push(nextmoves, fromcard);
-			stack_push(nextmoves, tocard);
+			stack_push(nextmoves, tocard + 1);
 		}
 
 		// ...to column
@@ -218,7 +225,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
 			if (validate_move(*fromcard, *tocard, 'c')) {
 				stack_push(nextmoves, fromcard);
-				stack_push(nextmoves, tocard);
+				stack_push(nextmoves, tocard + 1);
 			}
 		}
 	}
@@ -226,14 +233,14 @@ void listmoves(Board *board, Stack * nextmoves) {
 
 
 void play(Board *board, Card *card1, Card *card2) {
-	Card *p_tmp;
+	/*Card *p_tmp;
 
 	// Ensure card1 is the one moving on the free space
 	if (card1->value == nullcard.value) {
 		p_tmp = card1;
 		card1 = card2;
 		card2 = p_tmp;
-	}
+	}*/
 
 	// Update depth of column and of foundation
 	if (card1 >= (Card*)board->columns) {
@@ -250,68 +257,78 @@ void play(Board *board, Card *card1, Card *card2) {
 	} else {
 	}
 
+	// Move the card
 	*card2 = *card1;
 	*card1 = nullcard;
 }
 
 
-bool explore(Board * board, HashSet * visited_boards) {
+bool explore(Board * board, TreeSet * visited_boards, int depth) {
 	Stack *nextmoves;
+	bool isover;
 	Card *fromcard, *tocard;
-	char str[4];
+	XXH64_hash_t *hash;
 	str[3] = 0;
 
-	if (isgameover(board))
+	isover = isgameover(board);
+	if (isover) {
 		return true;
+	}
 
 	stack_new(&nextmoves);
 	listmoves(board, nextmoves);
 	while (stack_size(nextmoves)) {
 		stack_pop(nextmoves, (void**)&tocard);
 		stack_pop(nextmoves, (void**)&fromcard);
+
 		play(board, fromcard, tocard);
-
-		if (!hashset_contains(visited_boards, board)) {
-			hashset_add(visited_boards, board);
-			//board_show(board);
-			if (explore(board, visited_boards)) {
-				card_str(*fromcard, str);
-				printf("%s -> ", str);
-				card_str(*tocard, str);
-				printf("%s\n", str);
-				return true;
-			}
+		hash = (XXH64_hash_t*) calloc(1, sizeof(XXH64_hash_t));
+		*hash = XXH64(board, sizeof(Board), 0);
+		if (!treeset_contains(visited_boards, hash)) {
+			treeset_add(visited_boards, hash);
+			isover = explore(board, visited_boards, depth + 1);
 		}
-
 		play(board, tocard, fromcard);
+
+		if (isover) {
+			card_str(*fromcard, str);
+			printf("%s -> ", str);
+			if (tocard < board->foundation)
+				card_str(*tocard, str);
+			else
+				card_str(*(tocard-1), str);
+			printf("%s\n", str);
+			break;
+		}
 	}
 	stack_destroy(nextmoves);
-	return false;
+	return isover;
 }
 
 
-int board_comp(const void *b1, const void *b2) {
-	return memcmp(b1, b2, sizeof(Board));
+int board_comp(const void * ptr_h1, const void * ptr_h2) {
+	XXH64_hash_t h1, h2;
+
+	h1 = *(XXH64_hash_t*) ptr_h1;
+	h2 = *(XXH64_hash_t*) ptr_h2;
+
+	if (h1 < h2) return -1;
+	if (h2 < h1) return 1;
+	return 0;
 }
 
 
 int main(void) {
-	nullcard.value = 0;
-
 	Board board;
 	board_init(&board);
 	board_show(&board);
 
-	HashSet *visited_boards;
-	HashSetConf hsc;
-	hashset_conf_init(&hsc);
-	hsc.hash = XXH64;
-	hsc.key_compare = board_comp;
-	hsc.key_length = sizeof(Card) * 4 + 4 * MAXFDLEN + 8 * MAXCOLEN;
-	hashset_new_conf(&hsc, &visited_boards);
+	TreeSet *visited_boards;
+	treeset_new(board_comp, &visited_boards);
 
-	explore(&board, visited_boards);
+	explore(&board, visited_boards, 0);
 
-	hashset_destroy(visited_boards);
+	treeset_foreach(visited_boards, free);
+	treeset_destroy(visited_boards);
 	return 0;
 }
