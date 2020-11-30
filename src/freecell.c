@@ -33,7 +33,7 @@ void board_init(Board *board) {
 	Card deck[52];
 	Card newcard;
 
-	memset(board, 0, sizeof *board);
+	memset(board, 0, sizeof(Board));
 
 	// Init foundation
 	for (col = 0; col < 4; col++) {
@@ -70,6 +70,12 @@ void board_init(Board *board) {
 	for (col = 4; col < 8; col++) {
 		board->colen[col] = 6;
 	}
+
+	/*for (row = 8; row < MAXCOLEN; row++) {
+		for (col = 0; col < 8; col++) {
+			board->columns[col][row] = nullcard;
+		}
+	}*/
 }
 
 
@@ -160,7 +166,6 @@ bool validate_move(Card fromcard, Card tocard, char destination) {
 void listmoves(Board *board, Stack * nextmoves) {
 	int fromcol, tocol, symbol;
 	Card *fromcard, *tocard;
-	Card **cardpair;
 
 	// From freecell...
 	for (fromcol = 0; fromcol < 4; fromcol++) {
@@ -170,28 +175,16 @@ void listmoves(Board *board, Stack * nextmoves) {
 		symbol = fromcard->color * 2 + fromcard->symbol;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
 		if (validate_move(*fromcard, *tocard, 'f')) {
-			cardpair = calloc(2, sizeof(Card*));
-			if (cardpair == NULL) {
-				fprintf(stderr, "calloc fail\n");
-				exit(1);
-			}
-			cardpair[0] = fromcard;
-			cardpair[1] = tocard + 1;
-			stack_push(nextmoves, cardpair);
+			stack_push(nextmoves, fromcard);
+			stack_push(nextmoves, tocard);
 		}
 
 		// ...to column
 		for (tocol = 0; tocol < 8; tocol++) {
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
 			if (validate_move(*fromcard, *tocard, 'c')) {
-				cardpair = calloc(2, sizeof(Card*));
-				if (cardpair == NULL) {
-					fprintf(stderr, "calloc fail\n");
-					exit(1);
-				}
-				cardpair[0] = fromcard;
-				cardpair[1] = tocard + 8;
-				stack_push(nextmoves, cardpair);
+				stack_push(nextmoves, fromcard);
+				stack_push(nextmoves, tocard);
 			}
 		}
 	}
@@ -204,14 +197,9 @@ void listmoves(Board *board, Stack * nextmoves) {
 		for (tocol = 0; tocol < 4; tocol++) {
 			tocard = &(board->freecell[tocol]);
 			if (validate_move(*fromcard, *tocard, 'l')) {
-				cardpair = calloc(2, sizeof(Card*));
-				if (cardpair == NULL) {
-					fprintf(stderr, "calloc fail\n");
-					exit(1);
-				}
-				cardpair[0] = fromcard;
-				cardpair[1] = tocard;
-				stack_push(nextmoves, cardpair);
+				stack_push(nextmoves, fromcard);
+				stack_push(nextmoves, tocard);
+				break;
 			}
 		}
 
@@ -219,14 +207,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 		symbol = fromcard->color * 2 + fromcard->symbol;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
 		if (validate_move(*fromcard, *tocard, 'f')) {
-			cardpair = calloc(2, sizeof(Card*));
-			if (cardpair == NULL) {
-				fprintf(stderr, "calloc fail\n");
-				exit(1);
-			}
-			cardpair[0] = fromcard;
-			cardpair[1] = tocard + 1;
-			stack_push(nextmoves, cardpair);
+			stack_push(nextmoves, fromcard);
+			stack_push(nextmoves, tocard);
 		}
 
 		// ...to column
@@ -235,14 +217,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 				continue;
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
 			if (validate_move(*fromcard, *tocard, 'c')) {
-				cardpair = calloc(2, sizeof(Card*));
-				if (cardpair == NULL) {
-					fprintf(stderr, "calloc fail\n");
-					exit(1);
-				}
-				cardpair[0] = fromcard;
-				cardpair[1] = tocard + 8;
-				stack_push(nextmoves, cardpair);
+				stack_push(nextmoves, fromcard);
+				stack_push(nextmoves, tocard);
 			}
 		}
 	}
@@ -281,8 +257,7 @@ void play(Board *board, Card *card1, Card *card2) {
 
 bool explore(Board * board, HashSet * visited_boards) {
 	Stack *nextmoves;
-	Card *nextmove[2];
-	size_t freeze;
+	Card *fromcard, *tocard;
 	char str[4];
 	str[3] = 0;
 
@@ -292,65 +267,51 @@ bool explore(Board * board, HashSet * visited_boards) {
 	stack_new(&nextmoves);
 	listmoves(board, nextmoves);
 	while (stack_size(nextmoves)) {
-		stack_pop(nextmoves, &nextmove);
-		play(board, nextmove[0], nextmove[1]);
+		stack_pop(nextmoves, (void**)&tocard);
+		stack_pop(nextmoves, (void**)&fromcard);
+		play(board, fromcard, tocard);
 
-		freeze = hash(board);
-		if (!hashset_contains(visited_boards, freeze)) {
-			hashset_add(visited_boards, freeze);
+		if (!hashset_contains(visited_boards, board)) {
+			hashset_add(visited_boards, board);
+			//board_show(board);
 			if (explore(board, visited_boards)) {
-				card_str(*nextmove[0], str);
+				card_str(*fromcard, str);
 				printf("%s -> ", str);
-				card_str(*nextmove[1], str);
+				card_str(*tocard, str);
 				printf("%s\n", str);
 				return true;
 			}
 		}
 
-		play(board, nextmove[1], nextmove[0]);
+		play(board, tocard, fromcard);
 	}
+	stack_destroy(nextmoves);
 	return false;
 }
 
 
-/*  The hashtable_add uses the following code:
- *
-enum cc_stat hashtable_add(HashTable *table, void *key, void *val)
-{
-    const size_t hash = table->hash(key, table->key_len, table->hash_seed);
-    const size_t i    = hash & (table->capacity - 1);
-    ...
-*/
-
-/* The xxhash function has the following signature (from README.md):
- *
- *  	XXH64_hash_t hash = XXH64(buffer, size, seed);
- *
- * The hash function used by hashtable has the following signature:
- *
- *  	struct hashtable_s {
- *  		size_t (*hash) (const void *key, int l, uint32_t seed);
- *  	}
- */
-
-
+int board_comp(const void *b1, const void *b2) {
+	return memcmp(b1, b2, sizeof(Board));
+}
 
 
 int main(void) {
-	Board board;
-	HashSet *visited_boards;
-
 	nullcard.value = 0;
 
-	// Should reconfigure the hash function to xxh64
-	hashset_new(&visited_boards);
-	visited_boards->table->hash = xxh64;
-	visited_boards->table->key_len = 4 + 4 * MAXFDEN + 8 * MAXCOLEN;
-
+	Board board;
 	board_init(&board);
 	board_show(&board);
 
+	HashSet *visited_boards;
+	HashSetConf hsc;
+	hashset_conf_init(&hsc);
+	hsc.hash = XXH64;
+	hsc.key_compare = board_comp;
+	hsc.key_length = sizeof(Card) * 4 + 4 * MAXFDLEN + 8 * MAXCOLEN;
+	hashset_new_conf(&hsc, &visited_boards);
+
 	explore(&board, visited_boards);
 
+	hashset_destroy(visited_boards);
 	return 0;
 }
