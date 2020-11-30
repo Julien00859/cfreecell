@@ -5,7 +5,7 @@
 #include "xxhash.h"
 
 #define MAXFDLEN 14
-#define MAXCOLEN 21
+#define MAXCOLEN 22
 
 typedef struct card {
 	unsigned int _padding:2;

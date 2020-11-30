@@ -65,19 +65,21 @@ void board_init(Board *board) {
 	shuffle(deck, 52);
 
 	// Assign each card to a column
-	for (row = 0; row < 6; row++) {
+	for (col = 0; col < 8; col++) {
+		board->columns[col][0] = nullcard;
+	}
+	for (row = 1; row < 7; row++) {
 		for (col = 0; col < 8; col++) {
-			board->columns[col][row] = deck[row * 8 + col];
+			board->columns[col][row] = deck[(row - 1)* 8 + col];
 		}
 	}
 	for (col = 0; col < 4; col++) {
 		board->columns[col][row] = deck[48 + col];
-		board->colen[col] = 7;
+		board->colen[col] = 8;
 	}
 	for (col = 4; col < 8; col++) {
-		board->colen[col] = 6;
+		board->colen[col] = 7;
 	}
-
 	for (row = 8; row < MAXCOLEN; row++) {
 		for (col = 0; col < 8; col++) {
 			board->columns[col][row] = nullcard;
@@ -271,7 +273,7 @@ bool explore(Board * board, TreeSet * visited_boards, int depth) {
 	str[3] = 0;
 
 	isover = isgameover(board);
-	if (isover) {
+	if (isover || depth == 10) {
 		return true;
 	}
 
@@ -287,13 +289,15 @@ bool explore(Board * board, TreeSet * visited_boards, int depth) {
 		if (!treeset_contains(visited_boards, hash)) {
 			treeset_add(visited_boards, hash);
 			isover = explore(board, visited_boards, depth + 1);
+		} else {
+			free(hash);
 		}
 		play(board, tocard, fromcard);
 
 		if (isover) {
 			card_str(*fromcard, str);
 			printf("%s -> ", str);
-			if (tocard < board->foundation)
+			if (tocard < (Card*)board->foundation)
 				card_str(*tocard, str);
 			else
 				card_str(*(tocard-1), str);
