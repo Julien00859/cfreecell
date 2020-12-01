@@ -22,6 +22,13 @@ typedef struct board {
 	uint8_t colen[8];
 } Board;
 
+typedef struct node {
+	struct node *parent;
+	Card *lastfromcard;
+	Card *lasttocard;
+	Stack *nextmoves;
+} Node;
+
 void shuffle(Card *deck, int len);
 void board_init(Board *board);
 void board_show(Board *board);
@@ -29,5 +36,5 @@ void card_str(Card card, char *str);
 bool validate_move(Card fromcard, Card tocard, char destination);
 void listmoves(Board *board, Stack * nextmoves);
 void play(Board *board, Card *card1, Card *card2);
-bool explore(Board *board, TreeSet *visited_boards, int depth);
+bool explore(Board *board, TreeSet *visited_boards, Node * rootnode);
 int board_comp(const void * ptr_h1, const void * ptr_h2);

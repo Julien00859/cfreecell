@@ -180,14 +180,6 @@ void listmoves(Board *board, Stack * nextmoves) {
 	for (fromcol = 0; fromcol < 4; fromcol++) {
 		fromcard = &(board->freecell[fromcol]);
 
-		// ...to foundation
-		symbol = fromcard->color * 2 + fromcard->symbol;
-		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
-		if (validate_move(*fromcard, *tocard, 'f')) {
-			stack_push(nextmoves, fromcard);
-			stack_push(nextmoves, tocard + 1);
-		}
-
 		// ...to column
 		for (tocol = 0; tocol < 8; tocol++) {
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
@@ -195,6 +187,14 @@ void listmoves(Board *board, Stack * nextmoves) {
 				stack_push(nextmoves, fromcard);
 				stack_push(nextmoves, tocard + 1);
 			}
+		}
+
+		// ...to foundation
+		symbol = fromcard->color * 2 + fromcard->symbol;
+		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
+		if (validate_move(*fromcard, *tocard, 'f')) {
+			stack_push(nextmoves, fromcard);
+			stack_push(nextmoves, tocard + 1);
 		}
 	}
 
@@ -212,14 +212,6 @@ void listmoves(Board *board, Stack * nextmoves) {
 			}
 		}
 
-		// ...to foundation
-		symbol = fromcard->color * 2 + fromcard->symbol;
-		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
-		if (validate_move(*fromcard, *tocard, 'f')) {
-			stack_push(nextmoves, fromcard);
-			stack_push(nextmoves, tocard + 1);
-		}
-
 		// ...to column
 		for (tocol = 0; tocol < 8; tocol++) {
 			if (fromcol == tocol)
@@ -229,6 +221,14 @@ void listmoves(Board *board, Stack * nextmoves) {
 				stack_push(nextmoves, fromcard);
 				stack_push(nextmoves, tocard + 1);
 			}
+		}
+
+		// ...to foundation
+		symbol = fromcard->color * 2 + fromcard->symbol;
+		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
+		if (validate_move(*fromcard, *tocard, 'f')) {
+			stack_push(nextmoves, fromcard);
+			stack_push(nextmoves, tocard + 1);
 		}
 	}
 }
@@ -265,48 +265,74 @@ void play(Board *board, Card *card1, Card *card2) {
 }
 
 
-bool explore(Board * board, TreeSet * visited_boards, int depth) {
-	Stack *nextmoves;
-	bool isover;
+bool explore(Board * board, TreeSet * visited_boards, Node * rootnode) {
+	Node *node, *nextnode;
 	Card *fromcard, *tocard;
 	XXH64_hash_t *hash;
-	str[3] = 0;
 
-	isover = isgameover(board);
-	if (isover || depth == 10) {
-		return true;
-	}
+	node = rootnode;
 
-	stack_new(&nextmoves);
-	listmoves(board, nextmoves);
-	while (stack_size(nextmoves)) {
-		stack_pop(nextmoves, (void**)&tocard);
-		stack_pop(nextmoves, (void**)&fromcard);
+	while (true) {
+		if (stack_size(node->nextmoves)) {
+			stack_pop(node->nextmoves, (void**)&tocard);
+			stack_pop(node->nextmoves, (void**)&fromcard);
 
-		play(board, fromcard, tocard);
-		hash = (XXH64_hash_t*) calloc(1, sizeof(XXH64_hash_t));
-		*hash = XXH64(board, sizeof(Board), 0);
-		if (!treeset_contains(visited_boards, hash)) {
+			play(board, fromcard, tocard);
+			hash = (XXH64_hash_t*) calloc(1, sizeof(XXH64_hash_t));
+			*hash = XXH64(board, sizeof(Board), 0);
+			if (treeset_contains(visited_boards, hash)) {
+				free(hash);
+				play(board, tocard, fromcard);
+				continue;
+			}
 			treeset_add(visited_boards, hash);
-			isover = explore(board, visited_boards, depth + 1);
-		} else {
-			free(hash);
-		}
-		play(board, tocard, fromcard);
 
-		if (isover) {
-			card_str(*fromcard, str);
-			printf("%s -> ", str);
-			if (tocard < (Card*)board->foundation)
-				card_str(*tocard, str);
-			else
+			if (isgameover(board)) {
+				printf("Found a solution\n");
+				play(board, tocard, fromcard);
+				card_str(*fromcard, str);
+				printf("%s -> ", str);
 				card_str(*(tocard-1), str);
-			printf("%s\n", str);
-			break;
+				printf("%s\n", str);
+
+				while (node != rootnode) {
+					play(board, node->lasttocard, node->lastfromcard);
+					card_str(*(node->lastfromcard), str);
+					printf("%s -> ", str);
+					if (node->lasttocard < (Card*)board->foundation)
+						card_str(*(node->lasttocard), str);
+					else
+						card_str(*(node->lasttocard-1), str);
+					printf("%s\n", str);
+
+					stack_destroy(node->nextmoves);
+					nextnode = node;
+					node = node->parent;
+					free(nextnode);
+				}
+				return true;
+			}
+
+			nextnode = (Node*) calloc(1, sizeof(Node));
+			nextnode->parent = node;
+			nextnode->lastfromcard = fromcard;
+			nextnode->lasttocard = tocard;
+			stack_new(&(nextnode->nextmoves));
+			listmoves(board, nextnode->nextmoves);
+			node = nextnode;
+			continue;
 		}
+
+		if (node == rootnode) {
+			return false;
+		}
+
+		play(board, node->lasttocard, node->lastfromcard);
+		stack_destroy(node->nextmoves);
+		nextnode = node;
+		node = node->parent;
+		free(nextnode);
 	}
-	stack_destroy(nextmoves);
-	return isover;
 }
 
 
@@ -330,8 +356,16 @@ int main(void) {
 	TreeSet *visited_boards;
 	treeset_new(board_comp, &visited_boards);
 
-	explore(&board, visited_boards, 0);
+	Node rootnode;
+	rootnode.parent = NULL;
+	rootnode.lastfromcard = NULL;
+	rootnode.lasttocard = NULL;
+	stack_new(&(rootnode.nextmoves));
+	listmoves(&board, rootnode.nextmoves);
 
+	explore(&board, visited_boards, &rootnode);
+
+	stack_destroy(rootnode.nextmoves);
 	treeset_foreach(visited_boards, free);
 	treeset_destroy(visited_boards);
 	return 0;
