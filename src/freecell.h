@@ -23,8 +23,8 @@ typedef struct board {
 } Board;
 
 typedef struct node {
-	int depth;
-	double score;  // -inf is visited node
+	uint16_t depth;
+	float score;  // -inf is visited node
 	XXH64_hash_t hash;
 	struct node *parent;
 	Card *lastfromcard;
@@ -38,9 +38,9 @@ void board_init(Board *board);
 void board_show(Board *board);
 int board_comp(const void * ptr_h1, const void * ptr_h2);
 bool isgameover(Board *board);
-double evaluate(Board * board);
+float evaluate(Board * board, float depth);
 void listmoves(Board *board, Stack * nextmoves);
 void play(Board *board, Card *card1, Card *card2);
 void replay(Board * board, Node * fromnode, Node * tonode);
-void depth_search(Board * board, TreeSet * boards, Node * currentnode, int depth);
-bool astar_search(Board *board, TreeSet *visited_boards, Node * rootnode);
+void depth_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * currentnode, int depth);
+bool astar_search(Board *board, TreeSet *boards, TreeSet * vboards, Node * rootnode);

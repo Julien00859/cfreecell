@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <assert.h>
 #include "xxhash.h"
 #include "stack.h"
 #include "treetable.h"
@@ -165,10 +166,10 @@ void board_show(Board *board) {
 
 bool isgameover(Board *board) {
 	return (
-		board->foundation[0][13].value
-		&& board->foundation[1][13].value
-		&& board->foundation[2][13].value
-		&& board->foundation[3][13].value
+		board->fdlen[0] == 14
+		&& board->fdlen[1] == 14
+		&& board->fdlen[2] == 14
+		&& board->fdlen[3] == 14
 	);
 }
 
@@ -192,8 +193,10 @@ int board_comp(const void * ptr_n1, const void * ptr_n2) {
 }
 
 
-double evaluate(Board * board) {
-	return 1.0;
+float evaluate(Board * board, float depth) {
+	float fdcardcnt = board->fdlen[0] + board->fdlen[1] + board->fdlen[2] + board->fdlen[3];
+
+	return fdcardcnt - depth / 4;
 }
 
 
@@ -209,8 +212,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 		for (tocol = 0; tocol < 8; tocol++) {
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
 			if (validate_move(*fromcard, *tocard, 'c')) {
-				stack_push(nextmoves, fromcard);
-				stack_push(nextmoves, tocard + 1);
+				assert(stack_push(nextmoves, fromcard) == CC_OK);
+				assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 			}
 		}
 
@@ -218,8 +221,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 		symbol = fromcard->color * 2 + fromcard->symbol;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
 		if (validate_move(*fromcard, *tocard, 'f')) {
-			stack_push(nextmoves, fromcard);
-			stack_push(nextmoves, tocard + 1);
+			assert(stack_push(nextmoves, fromcard) == CC_OK);
+			assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 		}
 	}
 
@@ -231,8 +234,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 		for (tocol = 0; tocol < 4; tocol++) {
 			tocard = &(board->freecell[tocol]);
 			if (validate_move(*fromcard, *tocard, 'l')) {
-				stack_push(nextmoves, fromcard);
-				stack_push(nextmoves, tocard);
+				assert(stack_push(nextmoves, fromcard) == CC_OK);
+				assert(stack_push(nextmoves, tocard) == CC_OK);
 				break;
 			}
 		}
@@ -243,8 +246,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 				continue;
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
 			if (validate_move(*fromcard, *tocard, 'c')) {
-				stack_push(nextmoves, fromcard);
-				stack_push(nextmoves, tocard + 1);
+				assert(stack_push(nextmoves, fromcard) == CC_OK);
+				assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 			}
 		}
 
@@ -252,8 +255,8 @@ void listmoves(Board *board, Stack * nextmoves) {
 		symbol = fromcard->color * 2 + fromcard->symbol;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
 		if (validate_move(*fromcard, *tocard, 'f')) {
-			stack_push(nextmoves, fromcard);
-			stack_push(nextmoves, tocard + 1);
+			assert(stack_push(nextmoves, fromcard) == CC_OK);
+			assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 		}
 	}
 }
@@ -287,57 +290,59 @@ void replay(Board * board, Node * fromnode, Node * tonode) {
 	Stack * cardstack;
 	Card *fromcard, *tocard;
 
-	stack_new(&cardstack);
+	assert(stack_new(&cardstack) == CC_OK);
 	while (fromnode->depth > tonode->depth) {
 		play(board, fromnode->lasttocard, fromnode->lastfromcard);
 		fromnode = fromnode->parent;
 	}
 	while (fromnode->depth < tonode->depth) {
-		stack_push(cardstack, tonode->lastfromcard);
-		stack_push(cardstack, tonode->lasttocard);
+		assert(stack_push(cardstack, tonode->lastfromcard) == CC_OK);
+		assert(stack_push(cardstack, tonode->lasttocard) == CC_OK);
 		tonode = tonode->parent;
 	}
 	while (fromnode != tonode) {
 		play(board, fromnode->lasttocard, fromnode->lastfromcard);
-		stack_push(cardstack, tonode->lastfromcard);
-		stack_push(cardstack, tonode->lasttocard);
+		assert(stack_push(cardstack, tonode->lastfromcard) == CC_OK);
+		assert(stack_push(cardstack, tonode->lasttocard) == CC_OK);
 		tonode = tonode->parent;
 		fromnode = fromnode->parent;
 	}
 	while (stack_size(cardstack)) {
-		stack_pop(cardstack, (void**) &tocard);
-		stack_pop(cardstack, (void**) &fromcard);
+		assert(stack_pop(cardstack, (void**) &tocard) == CC_OK);
+		assert(stack_pop(cardstack, (void**) &fromcard) == CC_OK);
 		play(board, fromcard, tocard);
 	}
 	stack_destroy(cardstack);
 }
 
 
-void depth_search(Board * board, TreeSet * boards, Node * currentnode, int depth) {
+void depth_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * currentnode, int depth) {
 	Node *nextnode;
 	Stack *nextmoves;
 	Card *fromcard, *tocard;
 
-	stack_new(&nextmoves);
+	assert(stack_new(&nextmoves) == CC_OK);
 	listmoves(board, nextmoves);
 
 	while (stack_size(nextmoves)) {
-		stack_pop(nextmoves, (void**) &tocard);
-		stack_pop(nextmoves, (void**) &fromcard);
+		assert(stack_pop(nextmoves, (void**) &tocard) == CC_OK);
+		assert(stack_pop(nextmoves, (void**) &fromcard) == CC_OK);
 		play(board, fromcard, tocard);
 
 		nextnode = (Node*) calloc(1, sizeof(Node));
-		nextnode->hash = XXH64(board, sizeof(Board), 0);
-		nextnode->score = evaluate(board);
-		nextnode->parent = currentnode;
+		assert(nextnode != NULL);
 		nextnode->depth = currentnode->depth + 1;
+		nextnode->hash = XXH64(board, sizeof(Board), 0);
+		nextnode->score = evaluate(board, nextnode->depth);
+		nextnode->parent = currentnode;
 		nextnode->lastfromcard = fromcard;
 		nextnode->lasttocard = tocard;
+		assert(nextnode->depth);  // prevent int overflow
 
-		if (!treeset_contains(boards, nextnode)) {
-			treeset_add(boards, nextnode);
+		if (!treeset_contains(boards, nextnode) && !treeset_contains(vboards, nextnode)) {
+			assert(treeset_add(boards, nextnode) == CC_OK);
 			if (depth) {
-				depth_search(board, boards, nextnode, depth - 1);
+				depth_search(board, boards, vboards, nextnode, depth - 1);
 			}
 		} else {
 			free(nextnode);
@@ -350,26 +355,25 @@ void depth_search(Board * board, TreeSet * boards, Node * currentnode, int depth
 }
 
 
-bool astar_search(Board * board, TreeSet * boards, Node * rootnode) {
+bool astar_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * rootnode) {
 	Node *node, *nextnode;
 
 	node = rootnode;
 
 	while (!isgameover(board)) {
-		treeset_get_last(boards, (void**) &nextnode);
-		if (node->score == -INFINITY) {
+		assert(treeset_get_last(boards, (void**) &nextnode) == CC_OK);
+		if (nextnode->score == -INFINITY) {
 			printf("No solution found\n");
 			return false;
 		}
 		replay(board, node, nextnode);
 		node = nextnode;
-		depth_search(board, boards, node, 5);
-		node->score = -INFINITY;
-		treeset_remove(boards, node, NULL);
-		treeset_add(boards, node);
+		depth_search(board, boards, vboards, node, 5);
+		assert(treeset_remove(boards, node, NULL) == CC_OK);
+		assert(treeset_add(vboards, node) == CC_OK);
 	}
 
-	printf("Found a solution\n");
+	printf("Found a solution, game depth is %d\n", node->depth);
 	while (node->parent != NULL) {
 		play(board, node->lasttocard, node->lastfromcard);
 		setcardstr(*(node->lastfromcard));
@@ -387,26 +391,46 @@ bool astar_search(Board * board, TreeSet * boards, Node * rootnode) {
 
 int main(void) {
 	Board board;
+	Node rootnode;
+	TreeSet *boards, *vboards;
+	TreeSetIter iter;
+	void *ptr;
+
+	// Initialization
 	board_init(&board);
 	board_show(&board);
 
-	Node rootnode;
 	rootnode.depth = 0;
 	rootnode.hash = XXH64(&board, sizeof(Board), 0);
-	rootnode.score = evaluate(&board);
+	rootnode.score = evaluate(&board, 0);
 	rootnode.parent = NULL;
 	rootnode.lastfromcard = NULL;
 	rootnode.lasttocard = NULL;
 
-	TreeSet *boards;
-	treeset_new(board_comp, &boards);
-	treeset_add(boards, &rootnode);
+	assert(treeset_new(board_comp, &boards) == CC_OK);
+	assert(treeset_add(boards, &rootnode) == CC_OK);
+	assert(treeset_new(board_comp, &vboards) == CC_OK);
 
-	astar_search(&board, boards, &rootnode);
-
+	// Search
+	astar_search(&board, boards, vboards, &rootnode);
+	printf("\nStats:\n");
 	printf("play() call count: %ld\n", play_cnt);
+	printf("tree sizes: %ld\n", treeset_size(boards) + treeset_size(vboards));
+	fflush(stdout);
 
-	treeset_foreach(boards, free);
+	// Destruction
+	assert(treeset_remove(vboards, &rootnode, NULL) == CC_OK);
+	treeset_iter_init(&iter, boards);
+	while (treeset_iter_next(&iter, &ptr) == CC_OK) {
+		assert(treeset_iter_remove(&iter, NULL) == CC_OK);
+		free(ptr);
+	}
+	treeset_iter_init(&iter, vboards);
+	while (treeset_iter_next(&iter, &ptr) == CC_OK) {
+		assert(treeset_iter_remove(&iter, NULL) == CC_OK);
+		free(ptr);
+	}
 	treeset_destroy(boards);
+	treeset_destroy(vboards);
 	return 0;
 }
