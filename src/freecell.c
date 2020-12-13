@@ -1,9 +1,10 @@
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/random.h>
 #include <time.h>
-#include <assert.h>
 #include "stack.h"
 #include "freecell.h"
 #include "array.h"
@@ -363,7 +364,9 @@ int main(int argc, char *argv[]) {
 	long int start_time;
 
 	if (argc == 1) {
-		srand(time(0));
+		int seed;
+		assert(getrandom(&seed, sizeof(seed), 0) != -1);
+		srand(seed);
 	} else {
 		srand(atoi(argv[1]));
 	}
