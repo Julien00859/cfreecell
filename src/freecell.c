@@ -48,14 +48,14 @@ bool validate_move(Card fromcard, Card tocard, char destination) {
 		return false;
 
 	switch (destination) {
-		case 'l':
+		case 'l':  // freecell
 			return tocard.value == 0;
-		case 'f':
+		case 'f':  // foundation
 			return (
 				fromcard.symbol == tocard.symbol
 				&& fromcard.value == tocard.value + 1
 			);
-		case 'c':
+		case 'c':  // column
 			return (
 				tocard.value == 0
 				|| (
@@ -64,7 +64,7 @@ bool validate_move(Card fromcard, Card tocard, char destination) {
 				)
 			);
 		default:
-			exit(1);
+			assert(false);
 	}
 }
 
