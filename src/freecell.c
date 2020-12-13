@@ -8,7 +8,8 @@
 #include "freecell.h"
 #include "array.h"
 
-
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 static Card nullcard;
 static char cardstr[4] = "   ";
@@ -235,6 +236,60 @@ void listmoves(Board *board, Stack *nextmoves, Node *node) {
 }
 
 
+int play_cost(Board *board, Card *tocard) {
+	int column;
+	int topsortedcard_i;
+
+	if (tocard >= (Card*) board->columns) {
+		/* If the column is sorted, it is better when the topmost card
+		   is a high card. If it is not, it is better there are not
+		   many card stuck above the sorted ones and that the column
+		   depth is not too high.
+		*/
+
+		column = (tocard - (Card*) board->columns) / MAXCOLEN;
+		for (
+			topsortedcard_i = board->colen[column] - 1;
+			board->columns[column][topsortedcard_i].value
+			== board->columns[column][topsortedcard_i + 1].value + 1;
+			topsortedcard_i--
+		);
+
+		if (topsortedcard_i == 0) {
+			return 13 - tocard->value;
+		} else if (topsortedcard_i == 1) {
+			return 13 - board->columns[column][1].value;
+		}
+
+		return topsortedcard_i + board->colen[column] - 2;
+
+	} else if (tocard >= (Card*) board->foundation) {
+		/* It is better not to move a card to the foundation if that
+		   card value and the minimum card value of the opposite color
+		   have a (non-absolute) difference above 2.
+
+		   That is, if the foundation is 2S 2C 5H 3D, pushing the next
+		   spade, club or diamond is free, pushing the next heart has
+		   a cost of 3.
+		*/
+		return MAX(
+			board->fdlen[2 * tocard->color + tocard->symbol]
+			- MIN(
+				board->fdlen[2 - 2 * tocard->color],
+				board->fdlen[3 - 2 * tocard->color]
+			), 1) - 1;
+	} else {
+		/* It is better when there are many freecells */
+		return (
+			(board->freecell[0].value != 0)
+			+ (board->freecell[1].value != 0)
+			+ (board->freecell[2].value != 0)
+			+ (board->freecell[3].value != 0)
+		) + 1;
+	}
+}
+
+
 void play(Board *board, Card *card1, Card *card2) {
 	play_cnt++;
 
@@ -259,7 +314,8 @@ void play(Board *board, Card *card1, Card *card2) {
 }
 
 
-Node* depth_search(Board * board, Node * currentnode, int depth) {
+Node* depth_search(Board * board, Node * currentnode, int budget) {
+	int cost;
 	Node *nextnode, *bestnode;
 	Stack *nextmoves;
 	Card *fromcard, *tocard;
@@ -270,6 +326,7 @@ Node* depth_search(Board * board, Node * currentnode, int depth) {
 	while (stack_size(nextmoves)) {
 		assert(stack_pop(nextmoves, (void**) &tocard) == CC_OK);
 		assert(stack_pop(nextmoves, (void**) &fromcard) == CC_OK);
+		cost = play_cost(board, tocard);
 		play(board, fromcard, tocard);
 
 		nextnode = (Node*) calloc(1, sizeof(Node));
@@ -283,8 +340,8 @@ Node* depth_search(Board * board, Node * currentnode, int depth) {
 			return nextnode;
 		}
 
-		if (depth) {
-			bestnode = depth_search(board, nextnode, depth - 1);
+		if (cost <= budget) {
+			bestnode = depth_search(board, nextnode, budget - cost);
 			if (bestnode != NULL) {
 				return bestnode;
 			}
@@ -302,7 +359,7 @@ int main(int argc, char *argv[]) {
 	Board board;
 	Node rootnode;
 	Node *node, *nextnode;
-	int depth;
+	int budget;
 	long int start_time;
 
 	if (argc == 1) {
@@ -322,15 +379,15 @@ int main(int argc, char *argv[]) {
 
 	// Search, iterative deeping
 	node = NULL;
-	for (depth = 1; node == NULL; depth++) {
+	for (budget = 10; node == NULL; budget *= 1.1) {
 		play_cnt = 0;
 		nodes_cnt = 0;
-		node = depth_search(&board, &rootnode, depth);
-		printf("Depth %d, Time: %ld, Play: %lld, Node: %lld\n", depth, time(NULL) - start_time, play_cnt, nodes_cnt);
+		node = depth_search(&board, &rootnode, budget);
+		printf("Budget %d, Time: %ld, Play: %lld, Node: %lld\n", budget, time(NULL) - start_time, play_cnt, nodes_cnt);
 		fflush(stdout);
 	}
 
-	printf("Found a solution, game depth is %d\n", depth);
+	printf("Found a solution, game budget is %d\n", budget);
 	while (node->parent != NULL) {
 		play(&board, node->lasttocard, node->lastfromcard);
 		setcardstr(*(node->lastfromcard));

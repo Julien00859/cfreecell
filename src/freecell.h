@@ -36,5 +36,6 @@ void board_init(Board *board);
 void board_show(Board *board);
 bool isgameover(Board *board);
 void listmoves(Board *board, Stack * nextmoves, Node *node);
+int play_cost(Board *board, Card *tocard);
 void play(Board *board, Card *card1, Card *card2);
-Node* depth_search(Board * board, Node * currentnode, int depth);
+Node* depth_search(Board * board, Node * currentnode, int budget);
