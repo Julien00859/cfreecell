@@ -1,21 +1,22 @@
 #include <math.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
-#include <unistd.h>
 #include <assert.h>
-#include "xxhash.h"
 #include "stack.h"
-#include "treetable.h"
 #include "freecell.h"
+#include "array.h"
+
 
 
 static Card nullcard;
 static char cardstr[4] = "   ";
-static unsigned long play_cnt = 0;
+
+
+// Stats
+unsigned long long play_cnt;
+unsigned long long nodes_cnt;
 
 
 void setcardstr(Card card) {
@@ -66,7 +67,6 @@ bool validate_move(Card fromcard, Card tocard, char destination) {
 			exit(1);
 	}
 }
-
 
 void shuffle(Card *deck, int len) {
 	int i, r;
@@ -155,7 +155,7 @@ void board_show(Board *board) {
 		printf(" %s", cardstr);
 	}
 	printf("\n---------------------------------\n");
-	for (row = 0; row < MAXCOLEN; row++) {
+	for (row = 0; row < 9; row++) {
 		for (col = 0; col < 8; col++) {
 			setcardstr(board->columns[col][row]);
 			printf(" %s", cardstr);
@@ -174,33 +174,7 @@ bool isgameover(Board *board) {
 }
 
 
-int board_comp(const void * ptr_n1, const void * ptr_n2) {
-	Node n1, n2;
-
-	n1 = *(Node*) ptr_n1;
-	n2 = *(Node*) ptr_n2;
-
-	// Sort games by score
-	if (n1.score < n2.score) return -1;
-	if (n1.score > n2.score) return 1;
-
-	// Sub-sort by hash
-	// Is it necessary ? Could scores be == ?
-	if (n1.hash < n2.hash) return -1;
-	if (n1.hash > n2.hash) return 1;
-
-	return 0;
-}
-
-
-float evaluate(Board * board, float depth) {
-	float fdcardcnt = board->fdlen[0] + board->fdlen[1] + board->fdlen[2] + board->fdlen[3];
-
-	return fdcardcnt - depth / 4;
-}
-
-
-void listmoves(Board *board, Stack * nextmoves) {
+void listmoves(Board *board, Stack *nextmoves, Node *node) {
 	int fromcol, tocol, symbol;
 	Card *fromcard, *tocard;
 
@@ -211,7 +185,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 		// ...to column
 		for (tocol = 0; tocol < 8; tocol++) {
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
-			if (validate_move(*fromcard, *tocard, 'c')) {
+			if (validate_move(*fromcard, *tocard, 'c') && (fromcard != node->lasttocard || tocard != node->lastfromcard)) {
 				assert(stack_push(nextmoves, fromcard) == CC_OK);
 				assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 			}
@@ -220,7 +194,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 		// ...to foundation
 		symbol = fromcard->color * 2 + fromcard->symbol;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
-		if (validate_move(*fromcard, *tocard, 'f')) {
+		if (validate_move(*fromcard, *tocard, 'f') && (fromcard != node->lasttocard || tocard != node->lastfromcard)) {
 			assert(stack_push(nextmoves, fromcard) == CC_OK);
 			assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 		}
@@ -233,7 +207,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 		// ...to freecell
 		for (tocol = 0; tocol < 4; tocol++) {
 			tocard = &(board->freecell[tocol]);
-			if (validate_move(*fromcard, *tocard, 'l')) {
+			if (validate_move(*fromcard, *tocard, 'l') && (fromcard != node->lasttocard || tocard != node->lastfromcard)) {
 				assert(stack_push(nextmoves, fromcard) == CC_OK);
 				assert(stack_push(nextmoves, tocard) == CC_OK);
 				break;
@@ -245,7 +219,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 			if (fromcol == tocol)
 				continue;
 			tocard = &(board->columns[tocol][board->colen[tocol] - 1]);
-			if (validate_move(*fromcard, *tocard, 'c')) {
+			if (validate_move(*fromcard, *tocard, 'c') && (fromcard != node->lasttocard || tocard != node->lastfromcard)) {
 				assert(stack_push(nextmoves, fromcard) == CC_OK);
 				assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 			}
@@ -254,7 +228,7 @@ void listmoves(Board *board, Stack * nextmoves) {
 		// ...to foundation
 		symbol = fromcard->color * 2 + fromcard->symbol;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
-		if (validate_move(*fromcard, *tocard, 'f')) {
+		if (validate_move(*fromcard, *tocard, 'f') && (fromcard != node->lasttocard || tocard != node->lastfromcard)) {
 			assert(stack_push(nextmoves, fromcard) == CC_OK);
 			assert(stack_push(nextmoves, tocard + 1) == CC_OK);
 		}
@@ -286,43 +260,13 @@ void play(Board *board, Card *card1, Card *card2) {
 }
 
 
-void replay(Board * board, Node * fromnode, Node * tonode) {
-	Stack * cardstack;
-	Card *fromcard, *tocard;
-
-	assert(stack_new(&cardstack) == CC_OK);
-	while (fromnode->depth > tonode->depth) {
-		play(board, fromnode->lasttocard, fromnode->lastfromcard);
-		fromnode = fromnode->parent;
-	}
-	while (fromnode->depth < tonode->depth) {
-		assert(stack_push(cardstack, tonode->lastfromcard) == CC_OK);
-		assert(stack_push(cardstack, tonode->lasttocard) == CC_OK);
-		tonode = tonode->parent;
-	}
-	while (fromnode != tonode) {
-		play(board, fromnode->lasttocard, fromnode->lastfromcard);
-		assert(stack_push(cardstack, tonode->lastfromcard) == CC_OK);
-		assert(stack_push(cardstack, tonode->lasttocard) == CC_OK);
-		tonode = tonode->parent;
-		fromnode = fromnode->parent;
-	}
-	while (stack_size(cardstack)) {
-		assert(stack_pop(cardstack, (void**) &tocard) == CC_OK);
-		assert(stack_pop(cardstack, (void**) &fromcard) == CC_OK);
-		play(board, fromcard, tocard);
-	}
-	stack_destroy(cardstack);
-}
-
-
-void depth_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * currentnode, int depth) {
-	Node *nextnode;
+Node* depth_search(Board * board, Node * currentnode, int depth) {
+	Node *nextnode, *bestnode;
 	Stack *nextmoves;
 	Card *fromcard, *tocard;
 
 	assert(stack_new(&nextmoves) == CC_OK);
-	listmoves(board, nextmoves);
+	listmoves(board, nextmoves, currentnode);
 
 	while (stack_size(nextmoves)) {
 		assert(stack_pop(nextmoves, (void**) &tocard) == CC_OK);
@@ -331,106 +275,69 @@ void depth_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * cur
 
 		nextnode = (Node*) calloc(1, sizeof(Node));
 		assert(nextnode != NULL);
-		nextnode->depth = currentnode->depth + 1;
-		nextnode->hash = XXH64(board, sizeof(Board), 0);
-		nextnode->score = evaluate(board, nextnode->depth);
 		nextnode->parent = currentnode;
 		nextnode->lastfromcard = fromcard;
 		nextnode->lasttocard = tocard;
-		assert(nextnode->depth);  // prevent int overflow
+		nodes_cnt++;
 
-		if (!treeset_contains(boards, nextnode) && !treeset_contains(vboards, nextnode)) {
-			assert(treeset_add(boards, nextnode) == CC_OK);
-			if (depth) {
-				depth_search(board, boards, vboards, nextnode, depth - 1);
-			}
-		} else {
-			free(nextnode);
+		if (isgameover(board)) {
+			return nextnode;
 		}
 
+		if (depth) {
+			bestnode = depth_search(board, nextnode, depth - 1);
+			if (bestnode != NULL) {
+				return bestnode;
+			}
+		}
+
+		free(nextnode);
 		play(board, tocard, fromcard);
 	}
 
 	stack_destroy(nextmoves);
+	return NULL;
 }
-
-
-bool astar_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * rootnode) {
-	Node *node, *nextnode;
-
-	node = rootnode;
-
-	while (!isgameover(board)) {
-		assert(treeset_get_last(boards, (void**) &nextnode) == CC_OK);
-		if (nextnode->score == -INFINITY) {
-			printf("No solution found\n");
-			return false;
-		}
-		replay(board, node, nextnode);
-		node = nextnode;
-		depth_search(board, boards, vboards, node, 5);
-		assert(treeset_remove(boards, node, NULL) == CC_OK);
-		assert(treeset_add(vboards, node) == CC_OK);
-	}
-
-	printf("Found a solution, game depth is %d\n", node->depth);
-	while (node->parent != NULL) {
-		play(board, node->lasttocard, node->lastfromcard);
-		setcardstr(*(node->lastfromcard));
-		printf("%s -> ", cardstr);
-		if (node->lasttocard < (Card*) board->foundation)
-			setcardstr(*(node->lasttocard));
-		else
-			setcardstr(*(node->lasttocard-1));
-		printf("%s\n", cardstr);
-		node = node->parent;
-	}
-	return true;
-}
-
 
 int main(void) {
 	Board board;
 	Node rootnode;
-	TreeSet *boards, *vboards;
-	TreeSetIter iter;
-	void *ptr;
+	Node *node, *nextnode;
+	int depth;
+	long int start_time;
 
 	// Initialization
 	board_init(&board);
 	board_show(&board);
+	start_time = time(NULL);
 
-	rootnode.depth = 0;
-	rootnode.hash = XXH64(&board, sizeof(Board), 0);
-	rootnode.score = evaluate(&board, 0);
 	rootnode.parent = NULL;
 	rootnode.lastfromcard = NULL;
 	rootnode.lasttocard = NULL;
 
-	assert(treeset_new(board_comp, &boards) == CC_OK);
-	assert(treeset_add(boards, &rootnode) == CC_OK);
-	assert(treeset_new(board_comp, &vboards) == CC_OK);
-
-	// Search
-	astar_search(&board, boards, vboards, &rootnode);
-	printf("\nStats:\n");
-	printf("play() call count: %ld\n", play_cnt);
-	printf("tree sizes: %ld\n", treeset_size(boards) + treeset_size(vboards));
-	fflush(stdout);
-
-	// Destruction
-	assert(treeset_remove(vboards, &rootnode, NULL) == CC_OK);
-	treeset_iter_init(&iter, boards);
-	while (treeset_iter_next(&iter, &ptr) == CC_OK) {
-		assert(treeset_iter_remove(&iter, NULL) == CC_OK);
-		free(ptr);
+	// Search, iterative deeping
+	node = NULL;
+	for (depth = 1; node == NULL; depth++) {
+		play_cnt = 0;
+		nodes_cnt = 0;
+		node = depth_search(&board, &rootnode, depth);
+		printf("Depth %d, Time: %ld, Play: %lld, Node: %lld\n", depth, time(NULL) - start_time, play_cnt, nodes_cnt);
+		fflush(stdout);
 	}
-	treeset_iter_init(&iter, vboards);
-	while (treeset_iter_next(&iter, &ptr) == CC_OK) {
-		assert(treeset_iter_remove(&iter, NULL) == CC_OK);
-		free(ptr);
+
+	printf("Found a solution, game depth is %d\n", depth);
+	while (node->parent != NULL) {
+		play(&board, node->lasttocard, node->lastfromcard);
+		setcardstr(*(node->lastfromcard));
+		printf("%s -> ", cardstr);
+		if (node->lasttocard < (Card*) board.foundation)
+			setcardstr(*(node->lasttocard));
+		else
+			setcardstr(*(node->lasttocard-1));
+		printf("%s\n", cardstr);
+		nextnode = node;
+		node = node->parent;
+		free(nextnode);
 	}
-	treeset_destroy(boards);
-	treeset_destroy(vboards);
 	return 0;
 }

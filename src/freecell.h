@@ -1,8 +1,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "stack.h"
-#include "treeset.h"
-#include "xxhash.h"
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 #define MAXFDLEN 14
 #define MAXCOLEN 22
@@ -23,9 +24,6 @@ typedef struct board {
 } Board;
 
 typedef struct node {
-	uint16_t depth;
-	float score;  // -inf is visited node
-	XXH64_hash_t hash;
 	struct node *parent;
 	Card *lastfromcard;
 	Card *lasttocard;
@@ -36,11 +34,7 @@ bool validate_move(Card fromcard, Card tocard, char destination);
 void shuffle(Card *deck, int len);
 void board_init(Board *board);
 void board_show(Board *board);
-int board_comp(const void * ptr_h1, const void * ptr_h2);
 bool isgameover(Board *board);
-float evaluate(Board * board, float depth);
-void listmoves(Board *board, Stack * nextmoves);
+void listmoves(Board *board, Stack * nextmoves, Node *node);
 void play(Board *board, Card *card1, Card *card2);
-void replay(Board * board, Node * fromnode, Node * tonode);
-void depth_search(Board * board, TreeSet * boards, TreeSet * vboards, Node * currentnode, int depth);
-bool astar_search(Board *board, TreeSet *boards, TreeSet * vboards, Node * rootnode);
+Node* depth_search(Board * board, Node * currentnode, int depth);

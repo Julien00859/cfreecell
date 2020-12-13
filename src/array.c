@@ -20,7 +20,7 @@
 
 #include "array.h"
 
-#define DEFAULT_CAPACITY 8
+#define DEFAULT_CAPACITY 16
 #define DEFAULT_EXPANSION_FACTOR 2
 
 struct array_s {
