@@ -72,7 +72,6 @@ void shuffle(Card *deck, int len) {
 	int i, r;
 	Card tmp;
 
-	srand(time(0));
 	for (i = 0; i < len; i++) {
 		r = rand() % len;
 		tmp = deck[i];
@@ -299,12 +298,18 @@ Node* depth_search(Board * board, Node * currentnode, int depth) {
 	return NULL;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	Board board;
 	Node rootnode;
 	Node *node, *nextnode;
 	int depth;
 	long int start_time;
+
+	if (argc == 1) {
+		srand(time(0));
+	} else {
+		srand(atoi(argv[1]));
+	}
 
 	// Initialization
 	board_init(&board);
