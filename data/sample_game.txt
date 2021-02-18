@@ -1,0 +1,13 @@
+ KC          7H  AD  9D  JC  9S
+ QH          7C  AH  7D 10C  KC
+ JC          8S  3H  JS  4C  8H
+10H          9C  QD  KD  2C  QC
+ 9C          5C  2S  JD  3S  AS
+ 8H          8D  QH  3C  JH  6S
+ 7C                            
+ 6H                            
+ 5C                            
+ 4H                            
+ 3C                            
+ 2H                            
+ 1S                            
