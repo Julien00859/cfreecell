@@ -1,4 +1,9 @@
+#ifndef FREECELL_BOARD_H
+#define FREECELL_BOARD_H
+
 #include <stdbool.h>
+#include <stdint.h>
+#include "stack.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -7,7 +12,7 @@
 #define MAXCOLEN 22
 
 /**
- * Immuatable card, there are 52 + the nullcard
+ * Immutable card, there are 52 + the nullcard
  */
 typedef struct card {
 	unsigned int _padding:2;
@@ -27,10 +32,19 @@ typedef struct board {
 	uint8_t colen[8];
 
 	// Properties, must be recalculated after each move
-	int supermove;
 	uint8_t sortdepth[8];
 	int buildfactor[8];
 } Board;
+
+typedef struct cardpospair {
+    unsigned int col_1:3;
+    unsigned int row_1:5;
+    unsigned int col_2:3;
+    unsigned int row_2:5;
+} CardPosPair;
+
+static Card nullcard;
+static char cardstr[4] = "   ";
 
 int count_freecell(Board *board);
 
@@ -39,9 +53,11 @@ bool is_nullcard(Card card);
 bool is_empty(Board *board, int col);
 bool is_fully_sorted(Board *board, int col);
 bool is_game_won(Board *board);
+bool are_card_equal(Card c1, Card c2);
 
-card* bottom_card(Board *board, int col);
-card* highest_sorted_card(Board *board, int col);
+Card* bottom_card(Board *board, int col);
+Card* highest_sorted_card(Board *board, int col);
+CardPosPair search_card(Board *board, Card search_card)
 
 void compute_supermove(Board *board);
 void compute_sortdepth(Board *board);
@@ -54,4 +70,9 @@ void board_load(Board *board, const char *pathname);
 void board_show(Board *board);
 
 void move(Board *board, Card *card1, Card *card2);
-bool supermove(Board *board, int fromcol, int tocol, Stack * nextmoves);
+void humanmove(Board *board, int fromcol, int tocol);
+bool supermove_depth(Board *board, int fromcol, int tocol);
+bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextmoves);
+bool _deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_card_cnt, int card_cnt, Stack *nextmoves);
+
+#endif

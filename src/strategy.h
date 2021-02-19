@@ -3,7 +3,7 @@
 enum strat {
 	STRAT_AUTO,
 	STRAT_BUILD_NONEMPTY,
-}
+};
 
 typedef struct goal {
 	Stack * nextmoves;
