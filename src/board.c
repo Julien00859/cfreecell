@@ -164,10 +164,10 @@ void compute_sortdepth(Board *board) {
 
 	for (col = 0; col < 8; col++) {
 		for (
-			depth = 0, card = bottom_card(board, col);
-			!is_nullcard(*card) && is_move_valid(*card, *(card - 1), 'c');
+			card = bottom_card(board, col), depth = !is_nullcard(*card);
+			!is_nullcard(*(card - 1)) && is_move_valid(*card, *(card - 1), 'c');
 			depth++, card--
-		)
+		);
 		board->sortdepth[col] = depth;
 	}
 }
@@ -375,7 +375,7 @@ void board_show(Board *board) {
 		printf(" %s", cardstr);
 	}
 	printf("\n---------------------------------\n");
-	for (row = 0; row < 9; row++) {
+	for (row = 0; row < 10; row++) {
 		for (col = 0; col < 8; col++) {
 			setcardstr(board->columns[col][row]);
 			printf(" %s", cardstr);
@@ -423,7 +423,7 @@ void humanmove(Board *board, int fromcol, int tocol) {
     move(board, fromcard, tocard);
 }
 
-bool supermove_depth(Board *board, int fromcol, int tocol) {
+int supermove_depth(Board *board, int fromcol, int tocol) {
 	Card *fromcard, *highcard, *tocard;
 
 	fromcard = bottom_card(board, fromcol);
@@ -505,8 +505,20 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 			card_cnt--;
 		}
 
-		// Moves the card to the dest column
-		assert(is_move_valid(*fromcard, *tocard, 'c'));
+		// No freecell left, this card must move otherwise the move is impossible
+		if (!is_move_valid(*fromcard, *tocard, 'c')) {
+		    // Move impossible, undo stacking
+            while (stack_size(tempmoves)) {
+                fromcard++;
+                stack_pop(nextmoves, NULL);
+                stack_pop(nextmoves, NULL);
+                stack_pop(tempmoves, (void**)&tocard);
+                move(board, tocard, fromcard);
+            }
+            return false;
+        }
+
+		// Move the card
 		tocard++;
 		move(board, fromcard, tocard);
 		assert(stack_push(nextmoves, fromcard) == CC_OK);

@@ -57,7 +57,7 @@ bool are_card_equal(Card c1, Card c2);
 
 Card* bottom_card(Board *board, int col);
 Card* highest_sorted_card(Board *board, int col);
-CardPosPair search_card(Board *board, Card search_card)
+CardPosPair search_card(Board *board, Card search_card);
 
 void compute_supermove(Board *board);
 void compute_sortdepth(Board *board);
@@ -71,7 +71,7 @@ void board_show(Board *board);
 
 void move(Board *board, Card *card1, Card *card2);
 void humanmove(Board *board, int fromcol, int tocol);
-bool supermove_depth(Board *board, int fromcol, int tocol);
+int supermove_depth(Board *board, int fromcol, int tocol);
 bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextmoves);
 bool _deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_card_cnt, int card_cnt, Stack *nextmoves);
 

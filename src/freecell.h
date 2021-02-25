@@ -1,3 +1,6 @@
+#ifndef FREECELL_FREECELL_H
+#define FREECELL_FREECELL_H
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "board.h"
@@ -9,6 +12,8 @@ typedef struct node {
 	Card *lasttocard;
 } Node;
 
-void listmoves(Board *board, Stack * nextmoves, Node *node);
-int play_cost(Board *board, Card *tocard);
-Node* search(Board * board, Node * currentnode);
+//void listmoves(Board *board, Stack * nextmoves, Node *node);
+//int play_cost(Board *board, Card *tocard);
+Node* search(Board *board, Node *currentnode);
+
+#endif

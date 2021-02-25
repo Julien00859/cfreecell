@@ -47,6 +47,7 @@ void strat_auto_move(Board *board, Goal *goal) {
 		if (is_move_valid(*fromcard, *tocard, 'f') && respect_rule_of_two(board, *fromcard)) {
 			assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
 			assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
+			move(board, fromcard, tocard + 1);
 		}
 	}
 
@@ -58,6 +59,7 @@ void strat_auto_move(Board *board, Goal *goal) {
 		if (is_move_valid(*fromcard, *tocard, 'f') && respect_rule_of_two(board, *fromcard)) {
 			assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
 			assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
+            move(board, fromcard, tocard + 1);
 		}
 	}
 
@@ -67,11 +69,13 @@ void strat_auto_move(Board *board, Goal *goal) {
 }
 
 
-int comp_buildfactor(const void *p1, const void *p2) {
+int comp_buildfactor(const void *p1, const void *p2, const void *arg) {
     int col1, col2;
+    Board *board;
 
     col1 = *((int*)p1);
     col2 = *((int*)p2);
+    board = (Board*) arg;
 
 	if (board->buildfactor[col1] > board->buildfactor[col2])
 		return 1;
@@ -88,7 +92,7 @@ void strat_build_nonempty(Board *board, Goal *goal) {
 	Stack * nextmoves;
 
 
-	qsort(columns, 8, sizeof(int), comp_buildfactor);
+	qsort_r(columns, 8, sizeof(int), comp_buildfactor, board);
 
 	for (i = goal->a; i >= 0; i--) {  // i = 7, highest build factor
 		tocol = columns[i];
@@ -100,6 +104,7 @@ void strat_build_nonempty(Board *board, Goal *goal) {
 			if (is_move_valid(*fromcard, *tocard, 'c')) {
 				assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
 				assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
+				move(board, fromcard, tocard + 1);
 				goal->strat = STRAT_BUILD_NONEMPTY;
 				goal->a = i;
 				goal->b = fromcol + 1;
@@ -118,7 +123,7 @@ void strat_build_nonempty(Board *board, Goal *goal) {
 			if (supermove(board, fromcol, tocol, depth, goal->nextmoves)) {
 				goal->strat = STRAT_BUILD_NONEMPTY;
 				goal->a = i;
-				goal->b = 0;
+				goal->b = 4;
 				goal->c = j + 1;
 				return;
 			}
@@ -127,16 +132,44 @@ void strat_build_nonempty(Board *board, Goal *goal) {
 }
 
 
-void strat_build_empty(Board *board, Goal *goal) {
-	int fromcol, tocol;
+int comp_highest_sorted_card(const void *p1, const void *p2, const void *arg) {
+    int card_value1, card_value2;
+    Board *board;
 
+    board = (Board*) arg;
+    card_value1 = highest_sorted_card(board, *((int*)p1))->value;
+    card_value2 = highest_sorted_card(board, *((int*)p2))->value;
+
+    if (card_value1 > card_value2)
+        return 1;
+    else if (card_value1 < card_value2)
+        return -1;
+    return 0;
+}
+
+void strat_build_empty(Board *board, Goal *goal) {
+	int fromcol, tocol, columns_length, i;
+	int columns[8];
+
+	// J'AI OUBLIE LES FREECELL
+
+    columns_length = 0;
 	for (tocol = 0; tocol < 8; tocol++) {
 		if (!is_empty(board, tocol)) continue;
 		for (fromcol = 0; fromcol < 8; fromcol++) {
 			if (is_empty(board, fromcol)) continue;
 			if (is_fully_sorted(board, fromcol)) continue;
+			columns[columns_length++] = fromcol;
+		}
+        qsort_r(columns, columns_length, sizeof(int), comp_highest_sorted_card, board);
 
-
+		for (i = MIN(goal->a, columns_length - 1); i >= 0; i--) {
+		    fromcol = columns[i];
+		    if (supermove(board, fromcol, tocol, board->sortdepth[fromcol], goal->nextmoves)) {
+                goal->strat = STRAT_BUILD_EMPTY;
+		        goal->a = i + 1;
+                return;
+		    }
 		}
 	}
 }

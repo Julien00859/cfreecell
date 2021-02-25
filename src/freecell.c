@@ -6,6 +6,7 @@
 #include "board.h"
 #include "freecell.h"
 #include "stack.h"
+#include "strategy.h"
 
 
 // Stats
@@ -13,7 +14,7 @@ unsigned long long play_cnt;
 unsigned long long nodes_cnt;
 unsigned long int start_time;
 
-Node* search(Board * board, Node * currentnode) {
+Node* search(Board *board, Node *currentnode) {
 	return NULL;
 }
 
@@ -43,33 +44,56 @@ int main(int argc, char *argv[]) {
 
 	board_show(&board);
 
-	humanmove(&board, 8, 0xa);
+    humanmove(&board, 8, 0xa);
+    stack_new(&goal.nextmoves);
+    strat_auto_move(&board, &goal);
+    board_show(&board);
 
-	stack_new(&goal.nextmoves);
-	strat_auto_move(&board, &goal);
-
-	humanmove(&board, 8, 0);
-	humanmove(&board, 7, 8);
-	humanmove(&board, 1, 8);
-	humanmove(&board, 1, 0xb);
-	humanmove(&board, 1, 0xc);
-	humanmove(&board, 1, 0xd);
-	humanmove(&board, 1, 2);
-	humanmove(&board, 1, 8);
-	humanmove(&board, 1, 0);
-	humanmove(&board, 7, 2);
-	humanmove(&board, 7, 0);
-	humanmove(&board, 6, 0);
-	humanmove(&board, 7, 0);
-	humanmove(&board, 7, 6);
-	humanmove(&board, 7, 5);
-	humanmove(&board, 0xc, 7);
-	humanmove(&board, 0xb, 8);
+    humanmove(&board, 7, 8);
+    humanmove(&board, 1, 8);
+    humanmove(&board, 1, 0xb);
+    humanmove(&board, 1, 0xc);
+    humanmove(&board, 1, 0xd);
+    humanmove(&board, 1, 2);
+    humanmove(&board, 1, 8);
+    humanmove(&board, 1, 0);
+    humanmove(&board, 7, 2);
+    humanmove(&board, 7, 0);
+    humanmove(&board, 6, 0);
+    humanmove(&board, 7, 0);
+    humanmove(&board, 7, 6);
+    humanmove(&board, 7, 5);
+    humanmove(&board, 0xc, 7);
 	board_show(&board);
 
-	stack_new(&nextmoves);
-	supermove(&board, 7, 6, 5, nextmoves);
+    compute_sortdepth(&board);
+    compute_buildfactor(&board);
+	goal.a = 7;
+	goal.b = 0;
+	goal.c = 0;
+    strat_build_nonempty(&board, &goal);
     board_show(&board);
+    compute_sortdepth(&board);
+    compute_buildfactor(&board);
+    goal.a = 7;
+    goal.b = 0;
+    goal.c = 0;
+    strat_build_nonempty(&board, &goal);
+    humanmove(&board, 8, 0xb);
+    compute_sortdepth(&board);
+    compute_buildfactor(&board);
+    goal.a = 7;
+    goal.b = 0;
+    goal.c = 0;
+    strat_build_empty(&board, &goal);
+    compute_sortdepth(&board);
+    compute_buildfactor(&board);
+    goal.a = 7;
+    goal.b = 0;
+    goal.c = 0;
+    strat_build_nonempty(&board, &goal);
+    board_show(&board);
+    printf("%d\n", stack_size(goal.nextmoves));
 
 	return 0;
 }
