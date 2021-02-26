@@ -7,6 +7,7 @@ enum strat {
 	STRAT_AUTO,
 	STRAT_BUILD_NONEMPTY,
 	STRAT_BUILD_EMPTY,
+    STRAT_ACCESS_LOW_CARD,
 };
 
 typedef struct goal {

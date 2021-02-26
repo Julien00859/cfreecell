@@ -118,7 +118,7 @@ Card* highest_sorted_card(Board *board, int col) {
 /**
  * Searches for a precise card in the cascades
  */
-CardPosPair search_card(Board *board, Card search_card) {
+CardPosPair search_card(Board *board, Card searched_card) {
     int col, row;
     Card *card;
     CardPosPair cpp;
@@ -126,32 +126,21 @@ CardPosPair search_card(Board *board, Card search_card) {
     memset(&cpp, 0, sizeof(CardPosPair));
 
     for (col = 0; col < 4; col++) {
-        if (!are_card_equal(board->freecell[col], search_card)) continue;
-        if (cpp.row_1) {
-            cpp.col_2 = col;
-            cpp.row_2 = MAXCOLEN;
-            return cpp;
-        } else {
-            cpp.col_1 = col;
-            cpp.row_1 = MAXCOLEN;
-        }
+        if (!are_card_equal(board->freecell[col], searched_card)) continue;
+        cpp.col = col;
+        cpp.row = MAXCOLEN;
+        return cpp;
     }
 
     for (col = 0; col < 8; col++) {
         for (row = 1, card = bottom_card(board, col); !is_nullcard(*card); row++, card--) {
-            if (!are_card_equal(search_card, *card)) continue;
-            if (cpp.row_1) {
-                cpp.col_2 = col;
-                cpp.row_2 = board->colen[col] - row;
-                return cpp;
-            } else {
-                cpp.col_1 = col;
-                cpp.row_1 = board->colen[col] - row;
-            }
+            if (!are_card_equal(searched_card, *card)) continue;
+            cpp.col = col;
+            cpp.row = board->colen[col] - row;
+            return cpp;
         }
     }
-
-    return cpp;
+    assert(FALSE);
 }
 
 /**

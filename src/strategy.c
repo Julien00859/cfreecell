@@ -133,12 +133,14 @@ void strat_build_nonempty(Board *board, Goal *goal) {
 
 
 int comp_highest_sorted_card(const void *p1, const void *p2, const void *arg) {
-    int card_value1, card_value2;
+    int col1, col2, card_value1, card_value2;
     Board *board;
 
     board = (Board*) arg;
-    card_value1 = highest_sorted_card(board, *((int*)p1))->value;
-    card_value2 = highest_sorted_card(board, *((int*)p2))->value;
+    col1 = *((int*)p1);
+    col2 = *((int*)p2);
+    card_value1 = col1 < 8 ? highest_sorted_card(board, col1)->value : board->freecell[col1 - 8].value;
+    card_value2 = col2 < 8 ? highest_sorted_card(board, col2)->value : board->freecell[col2 - 8].value;
 
     if (card_value1 > card_value2)
         return 1;
@@ -147,11 +149,13 @@ int comp_highest_sorted_card(const void *p1, const void *p2, const void *arg) {
     return 0;
 }
 
+/**
+ * Start empty columns high (king first) skipping fully-sorted columns and partially-sorted columns when it is
+ * impossible to move all the sorted cards.
+ */
 void strat_build_empty(Board *board, Goal *goal) {
 	int fromcol, tocol, columns_length, i;
-	int columns[8];
-
-	// J'AI OUBLIE LES FREECELL
+	int columns[12];  // Maximum 8 columns + 4 freecells, columns have value 0->7, freecells 8->11
 
     columns_length = 0;
 	for (tocol = 0; tocol < 8; tocol++) {
@@ -161,24 +165,133 @@ void strat_build_empty(Board *board, Goal *goal) {
 			if (is_fully_sorted(board, fromcol)) continue;
 			columns[columns_length++] = fromcol;
 		}
+		for (fromcol = 0; fromcol < 4; fromcol++) {
+		    if (is_nullcard(board->freecell[fromcol])) continue;
+		    columns[columns_length++] = fromcol + 8;
+		}
         qsort_r(columns, columns_length, sizeof(int), comp_highest_sorted_card, board);
 
 		for (i = MIN(goal->a, columns_length - 1); i >= 0; i--) {
 		    fromcol = columns[i];
+		    if (fromcol > 8) {
+                stack_push(goal->nextmoves, &board->freecell[fromcol - 8]);
+                stack_push(goal->nextmoves, bottom_card(board, tocol) + 1);
+                move(board, &board->freecell[fromcol - 8], bottom_card(board, tocol) + 1);
+                goal->strat = STRAT_BUILD_EMPTY;
+                goal->a = i - 1;
+                return;
+            }
 		    if (supermove(board, fromcol, tocol, board->sortdepth[fromcol], goal->nextmoves)) {
                 goal->strat = STRAT_BUILD_EMPTY;
-		        goal->a = i + 1;
+                goal->a = i - 1;
                 return;
-		    }
-		}
+            }
+        }
+
+		break;  // No need to apply the same algo to another empty column, the result would be the same
 	}
 }
 
+int comp_fdlen(const void *p1, const void *p2, const void *arg) {
+    int suit1, suit2;
+    Board *board;
 
+    suit1 = *((int*)p1);
+    suit2 = *((int*)p2);
+    board = (Board*) arg;
+
+    if (board->fdlen[suit1] > board->fdlen[suit2])
+        return 1;
+    else if (board->fdlen[suit1] > board->fdlen[suit2])
+        return -1;
+    return 0;
+}
+
+/**
+ * Find a card that is low and destruct the column to access it
+ */
 void strat_access_low_card(Board *board, Goal *goal) {
-	int suit, minvalue;
+	int i, suit, minvalue, freecell, freecol, depth;
+	int suits[4] = {0, 1, 2, 3};
+	Card low_card, *card;
+	CardPosPair cpp;
 
-	for (suit = 0; suit < 4; suit++) {
+	qsort_r(suits, 4, sizeof(int), comp_fdlen, board);
 
+	for (freecell = 3; freecell >= 0 && !is_nullcard(board->freecell[freecell]); freecell--);
+    for (freecol = 7; freecol >= 0 && !is_empty(board, freecol); freecol--);
+    if (freecell == -1 && freecol == -1) return;
+
+	for (i = goal->a; i < 4; i++) {  // i = 0
+	    suit = suits[i];
+        low_card.color = suit & 0b10;
+        low_card.symbol = suit & 0b01;
+        low_card.value = board->fdlen[suit];
+
+        cpp = search_card(board, low_card);
+
+        // Low card is on freecell
+        if (cpp.row == MAXCOLEN) {  // Awful hack
+            stack_push(goal->nextmoves, &board->freecell[cpp.col]);
+            stack_push(goal->nextmoves, &board->foundation[suit][board->fdlen[suit]]);
+            move(board, &board->freecell[cpp.col], &board->foundation[suit][board->fdlen[suit]]);
+            goal->strat = STRAT_ACCESS_LOW_CARD;
+            goal->a = i + 1;
+            goal->b = 0;
+            return;
+        }
+
+        // Low card is at the bottom of a column
+        if (are_card_equal(*bottom_card(board, cpp.col), low_card)) {
+            stack_push(goal->nextmoves, bottom_card(board, cpp.col));
+            stack_push(goal->nextmoves, &board->foundation[suit][board->fdlen[suit]]);
+            move(board, &board->freecell[cpp.col], bottom_card(board, cpp.col));
+            goal->strat = STRAT_ACCESS_LOW_CARD;
+            goal->a = i + 1;
+            goal->b = 0;
+            return;
+        }
+
+        // Card is deeper in a column, consume an empty column with at least 2 cards
+        if (goal->b <= 0 && freecol != -1) {
+            // Try at sortdepth - 1 as STRAT_BUILD_EMPTY builds at full depth already, super-moves at least 2 cards
+            for (depth = board->sortdepth[cpp.col] - 1; depth >= 2; depth--) {
+                if (supermove(board, cpp.col, freecol, depth, goal->nextmoves)) {
+                    goal->strat = STRAT_ACCESS_LOW_CARD;
+                    goal->a = i;
+                    goal->b = 1;
+                    return;
+                }
+            }
+        }
+
+        // Consume a freecell
+        if (goal->b <= 1 && freecell != -1) {
+            stack_push(goal->nextmoves, bottom_card(board, cpp.col);
+            stack_push(goal->nextmoves, &board->freecell[freecell]);
+            move(board, bottom_card(board, cpp.col), &board->freecell[freecell]);
+            goal->strat = STRAT_ACCESS_LOW_CARD;
+            goal->a = i;
+            goal->b = 2;
+            return;
+        }
+
+        // Last resort, consume a column with only 1 card
+        if (goal->b <= 2 && freecol) {
+            stack_push(goal->nextmoves, bottom_card(board, cpp.col));
+            stack_push(goal->nextmoves, bottom_card(board, freecol) + 1);
+            move(board, bottom_card(board, cpp.col), bottom_card(board, freecol) + 1);
+            goal->strat = STRAT_ACCESS_LOW_CARD;
+            goal->a = i + 1;
+            goal->b = 0;
+            return;
+        }
 	}
+}
+
+/**
+ * Last resort, just move any card
+ */
+void strat_any_move(Board *board, Goal *goal) {
+    
 }

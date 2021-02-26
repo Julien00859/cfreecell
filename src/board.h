@@ -37,16 +37,15 @@ typedef struct board {
 } Board;
 
 typedef struct cardpospair {
-    unsigned int col_1:3;
-    unsigned int row_1:5;
-    unsigned int col_2:3;
-    unsigned int row_2:5;
+    unsigned int col:3;
+    unsigned int row:5;
 } CardPosPair;
 
 static Card nullcard;
 static char cardstr[4] = "   ";
 
 int count_freecell(Board *board);
+int count_empty_column(Board *board);
 
 bool is_move_valid(Card fromcard, Card tocard, char destination);
 bool is_nullcard(Card card);
@@ -57,9 +56,8 @@ bool are_card_equal(Card c1, Card c2);
 
 Card* bottom_card(Board *board, int col);
 Card* highest_sorted_card(Board *board, int col);
-CardPosPair search_card(Board *board, Card search_card);
+CardPosPair search_card(Board *board, Card searched_card);
 
-void compute_supermove(Board *board);
 void compute_sortdepth(Board *board);
 void compute_buildfactor(Board *board);
 
