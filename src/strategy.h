@@ -8,6 +8,8 @@ enum strat {
 	STRAT_BUILD_NONEMPTY,
 	STRAT_BUILD_EMPTY,
     STRAT_ACCESS_LOW_CARD,
+    STRAT_ANY_MOVE,
+    STRAT_LAST_RESORT,
 };
 
 typedef struct goal {

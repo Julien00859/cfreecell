@@ -9,20 +9,27 @@
  * The "Rule of Two" is a freecell property that indicates a card can be
  * automatically moved to the foundation.
  *
- * TL;DR, the card can be moved to the foundation if its value is lower or
- * equal to the card of the opposite color least value + 2.
+ * TL;DR, a card can be moved to the foundation if its value is lower or
+ * equal to the foundation's card of the opposite color least value + 2.
  *
- * The card can be moved if it is the card of the least (or equal to the
- * least) value still in the cascades or the freecell. All lower cards
- * are on the foundation already and it is impossible to move a card back
- * from the foundation to the freecells. It is impossible to add cards
- * bellow the considered one so it is safe to move it to the foundation.
+ * The "Rule of Two" is based on the following property : it is impossible
+ * to move a card bellow the lowest card (value wise) that is not on the
+ * foundation. By the rule of the freecell game, it is forbidden to move a
+ * card from the foundation. Because there are no card still "in game" that
+ * could be moved bellow the considered card, it can be safely move to the
+ * foundation. This is the "least foundation value + 1" card property.
  *
- * The card can be moved if all the cards of the opposite color whose
- * values are strictly bellow the considered card's value - 1 are in the
- * foundation already. All cards of opposite color whose value is exactly
- * this card's value - 1 can be automatically moved to the foundation by
- * the first property of the "Rule of Two".
+ * By the "least foundation value + 1" property, we know that those cards
+ * will be immediately moved to the foundation. They will not be moved to
+ * another column on "least foundation value + 2" cards. It means that no
+ * card will be moved to "least foundation value + 2" cards either thus it
+ * is safe to move them to the foundation too.
+ *
+ * On the other hand, the "least foundation value + 3" cannot be
+ * automatically moved. This is not always safe as we cannot guarantee
+ * without more knowledge that the card will not be needed to move a "least
+ * foundation value + 2" card blocking the same symbol "least foundation
+ * value + 1" card.
  */
 bool respect_rule_of_two(Board *board, Card fromcard) {
 	return fromcard.value <= MIN(
@@ -85,6 +92,11 @@ int comp_buildfactor(const void *p1, const void *p2, const void *arg) {
 }
 
 
+/**
+ * Use the build-factor (a value computing "how well" a column is sorted) to
+ * move cards from columns with a low sort build-factor to columns with a
+ * better one.
+ */
 void strat_build_nonempty(Board *board, Goal *goal) {
 	int i, j, tocol, fromcol, depth;
 	Card *tocard, *fromcard, *highcard;
@@ -290,8 +302,112 @@ void strat_access_low_card(Board *board, Goal *goal) {
 }
 
 /**
- * Last resort, just move any card
+ * Nothing clever to do, just move any card
  */
 void strat_any_move(Board *board, Goal *goal) {
-    
+    int fromcol, tocol, symbol, depth;
+    Card *fromcard, *tocard;
+
+    // From freecell...
+    for (fromcol = goal->a; fromcol <= 0; fromcol++) {  // fromcol = -3
+        fromcard = &(board->freecell[-fromcol]);
+
+        // ...to foundation
+        if (goal->b == -1) {
+            symbol = fromcard->color * 2 + fromcard->symbol;
+            tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
+            if (is_move_valid(*fromcard, *tocard, 'f')) {
+                assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
+                assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
+                move(board, fromcard, tocard + 1);
+                goal->strat = STRAT_ANY_MOVE;
+                goal->a = fromcol;
+                goal->b = 0;
+                return;
+            }
+        }
+
+        // ...to column
+        for (tocol = goal->b; tocol < 8; tocol++) {
+            tocard = bottom_card(board, tocol);
+            if (is_move_valid(*fromcard, *tocard, 'c')) {
+                assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
+                assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
+                move(board, fromcard, tocard + 1);
+                goal->strat = STRAT_ANY_MOVE;
+                goal->a = fromcol;
+                goal->b = tocol + 1;
+                return;
+            }
+        }
+    }
+
+    // From column...
+    for (fromcol = goal->a; fromcol < 8; fromcol++) {
+        // ...to foundation
+        if (goal->b == -4) {
+            fromcard = bottom_card(board, fromcol);
+            symbol = fromcard->color * 2 + fromcard->symbol;
+            tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
+            if (is_move_valid(*fromcard, *tocard, 'f')) {
+                assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
+                assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
+                move(board, fromcard, tocard + 1);
+                goal->strat = STRAT_ANY_MOVE;
+                goal->a = fromcol;
+                goal->b = -3;
+                return;
+            }
+        }
+
+        // ...to column
+        for (tocol = goal->b; tocol < 8; tocol++) {
+            if (fromcol == tocol)
+                continue;
+            if (is_empty(board, tocol))
+                continue;
+            depth = supermove_depth(board, fromcol, tocol);
+            if (!depth)
+                continue;
+
+            if (supermove(board, fromcol, tocol, depth, goal->nextmoves)) {
+                goal->strat = STRAT_ANY_MOVE;
+                goal->a = fromcol;
+                goal->b = tocol + 1;
+                return;
+            }
+        }
+    }
+}
+
+/**
+ * Last resort, move some cards on the freecells
+ */
+void strat_last_resort(Board *board, Goal *goal) {
+    int i, fromcol, tocol, depth, freecell_cnt;
+    int columns[] = {0, 1, 2, 3, 4, 5, 6, 7};
+    Card *fromcard, *tocard;
+
+    freecell_cnt = count_freecell(board);
+    qsort_r(columns, 8, sizeof(int), comp_buildfactor, board);
+
+    for (i = goal->a; i >= 0; i--) {  // i = 0, lowest build factor
+        fromcol = columns[i];
+        if (board->sortdepth[fromcol] > freecell_cnt)
+            continue;
+
+        for (tocol = 0; board->sortdepth[fromcol]; tocol++) {
+            tocard = &board->freecell[tocol];
+            if (!is_nullcard(*tocard))
+                continue;
+
+            fromcard = bottom_card(board, fromcol);
+            assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
+            assert(stack_push(goal->nextmoves, tocard) == CC_OK);
+            move(board, fromcard, tocard);
+        }
+
+        goal->strat = STRAT_LAST_RESORT;
+        goal->a = i + 1;
+    }
 }
