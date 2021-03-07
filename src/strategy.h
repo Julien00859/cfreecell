@@ -4,12 +4,16 @@
 #include "stack.h"
 
 enum strat {
-	STRAT_AUTO,
-	STRAT_BUILD_NONEMPTY,
-	STRAT_BUILD_EMPTY,
+    STRAT_NULL,   // When we are still searching
+    STRAT_RULE_OF_TWO,
+    STRAT_BUILD_DOWN,
+    STRAT_BUILD_EMPTY,
     STRAT_ACCESS_LOW_CARD,
-    STRAT_ANY_MOVE,
-    STRAT_LAST_RESORT,
+    STRAT_ACCESS_BUILD_CARD,
+    STRAT_ACCESS_EMPTY,
+    STRAT_ANY_MOVE_CASCADE,
+    STRAT_ANY_MOVE_FOUNDATION,
+    STRAT_ANY_MOVE_FREECELL,  // Last resort
 };
 
 typedef struct goal {
@@ -22,10 +26,20 @@ typedef struct goal {
 
 
 bool respect_rule_of_two(Board *board, Card fromcard);
-void strat_auto_move(Board *board, Goal *goal);
 int comp_buildfactor(const void *p1, const void *p2, const void *arg);
-void strat_build_nonempty(Board *board, Goal *goal);
+int comp_highest_sorted_card(const void *p1, const void *p2, const void *arg);
+int comp_fdlen(const void *p1, const void *p2, const void *arg);
+
+
+void strat_rule_of_two(Board *board, Goal *goal);
+void strat_delete_any(Board *board, Goal *goal);
+void strat_build_down(Board *board, Goal *goal);
 void strat_build_empty(Board *board, Goal *goal);
 void strat_access_low_card(Board *board, Goal *goal);
+void strat_access_build_card(Board *board, Goal *goal);
+void strat_access_empty(Board *board, Goal *goal);
+void strat_any_move_cascade(Board *board, Goal *goal);
+void strat_any_move_foundation(Board *board, Goal *goal);
+void strat_any_move_freecell(Board *board, Goal *goal);
 
 #endif

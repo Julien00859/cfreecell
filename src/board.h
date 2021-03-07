@@ -8,6 +8,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#define KING 13
 #define MAXFDLEN 14
 #define MAXCOLEN 22
 
