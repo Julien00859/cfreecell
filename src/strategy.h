@@ -21,18 +21,15 @@ typedef struct goal {
 	enum strat strat;
 	int a;
 	int b;
-	int c;
 } Goal;
-
 
 bool respect_rule_of_two(Board *board, Card fromcard);
 int comp_buildfactor(const void *p1, const void *p2, const void *arg);
 int comp_highest_sorted_card(const void *p1, const void *p2, const void *arg);
 int comp_fdlen(const void *p1, const void *p2, const void *arg);
-
+int comp_collen(const void *p1, const void *p2, const void *arg);
 
 void strat_rule_of_two(Board *board, Goal *goal);
-void strat_delete_any(Board *board, Goal *goal);
 void strat_build_down(Board *board, Goal *goal);
 void strat_build_empty(Board *board, Goal *goal);
 void strat_access_low_card(Board *board, Goal *goal);
