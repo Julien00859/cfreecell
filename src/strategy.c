@@ -218,7 +218,7 @@ void strat_build_empty(Board *board, Goal *goal) {
     if (!columns_length) return;
     isort_r(columns, columns_length, sizeof(int), comp_highest_sorted_card, board);
 
-    for (i = MIN(goal->a, columns_length - 1); i >= 0; i--) {  // i = 12
+    for (i = MIN(goal->a, columns_length - 1); i >= 0; i--) {  // i = 11
         fromcol = columns[i];
 
         // From freecell to empty column
@@ -270,7 +270,6 @@ void strat_access_low_card(Board *board, Goal *goal) {
             move(board, &board->freecell[cpp.col], &board->foundation[suit][board->fdlen[suit]]);
             goal->strat = STRAT_ACCESS_LOW_CARD;
             goal->a = i + 1;
-            goal->b = 0;
             return;
         }
 
@@ -304,14 +303,14 @@ void strat_access_build_card(Board *board, Goal *goal) {
     isort_r(columns, columns_length, sizeof(int), comp_buildfactor, board);
 
     // For each column...
-    for (i = MIN(goal->a, columns_length - 1); i >= 0; i--) {  // i = 8
+    for (i = MIN(goal->a, columns_length - 1); i >= 0; i--) {  // i = 7
         tocol = columns[i];
         tocard = bottom_card(board, tocol);
 
         // ...search for a card that can be moved at the bottom
         build_card.value = tocard->value - 1;
         build_card.color = 1 - tocard->color;
-        for (s = goal->b; s < 2; s++) {
+        for (s = goal->b; s < 2; s++) {  // // s = 0
             build_card.symbol = s;
             suit = build_card.color * 2 + build_card.symbol;
             if (build_card.value <= board->fdlen[suit]) continue;  // card is on the foundation already
@@ -349,7 +348,7 @@ void strat_access_empty(Board *board, Goal *goal) {
 
     isort_r(columns, 8, sizeof(int), comp_collen, board);
 
-    for (i = goal->a; i >= 0; i--) {
+    for (i = goal->a; i >= 0; i--) {  // i = 7
         cpp.row = 0;
         cpp.col = columns[i];
 
@@ -367,12 +366,12 @@ void strat_any_move_cascade(Board *board, Goal *goal) {
     Card *fromcard, *tocard;
 
     // To cascade...
-    for (tocol = goal->a; tocol < 8; tocol++) {
+    for (tocol = goal->a; tocol < 8; tocol++) {  // tocol = 0;
         tocard = bottom_card(board, tocol);
 
         // ... from freecell
         fromcol = goal->b;
-        for (; fromcol < 0; fromcol++) {  // fromcol = -3;
+        for (; fromcol < 0; fromcol++) {  // fromcol = -4;
             fromcard = &board->freecell[fromcol + 4];
             if (!is_move_valid(*fromcard, *tocard, 'c')) continue;
             assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
@@ -405,7 +404,7 @@ void strat_any_move_foundation(Board *board, Goal *goal) {
     int fromcol, suit;
     Card *fromcard, *tocard;
 
-    for (fromcol = goal->a; fromcol < 8; fromcol++) {
+    for (fromcol = goal->a; fromcol < 8; fromcol++) {  // fromcol = 0
         fromcard = fromcol < 0 ? &board->freecell[fromcol + 4] : bottom_card(board, fromcol);
         suit = fromcard->color * 2 + fromcard->symbol;
         tocard = &board->foundation[suit][board->fdlen[suit] - 1];
@@ -436,7 +435,7 @@ void strat_any_move_freecell(Board *board, Goal *goal) {
     if (!freecell_cnt) return;
 
     // Find a column from which we can move all sorted cards to freecells
-    for (fromcol = goal->a; fromcol < 8; fromcol++) {
+    for (fromcol = goal->a; fromcol < 8; fromcol++) {  // fromcol = 0
         if (is_empty(board, fromcol)) continue;
         depth = board->sortdepth[fromcol];
         if (depth > freecell_cnt) continue;
