@@ -2,7 +2,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include "board.h"
 
@@ -351,6 +350,24 @@ void setcardstr(Card card) {
         case 1: cardstr[2] = 'C'; break;
         case 2: cardstr[2] = 'H'; break;
         case 3: cardstr[2] = 'D'; break;
+    }
+}
+
+void setmovestr(Board *board, Card *fromcard, Card *tocard) {
+    if (fromcard >= (Card*) board->columns) {
+        movestr[0] = '1' + ((fromcard - (Card*) board->columns) / MAXCOLEN);
+    } else if (fromcard >= (Card*) board->foundation) {
+        movestr[0] = 'h';
+    } else {
+        movestr[0] = 'a' + ((fromcard - (Card*) board->freecell));
+    }
+
+    if (tocard >= (Card*) board->columns) {
+        movestr[1] = '1' + ((tocard - (Card*) board->columns) / MAXCOLEN);
+    } else if (tocard >= (Card*) board->foundation) {
+        movestr[1] = 'h';
+    } else {
+        movestr[1] = 'a' + ((tocard - (Card*) board->freecell));
     }
 }
 

@@ -44,6 +44,7 @@ typedef struct cardpospair {
 
 static Card nullcard;
 static char cardstr[4] = "   ";
+static char movestr[3] = "  ";
 
 int count_freecell(Board *board);
 int count_empty_column(Board *board);
@@ -64,6 +65,8 @@ void compute_sortdepth_col(Board *board, int col);
 void compute_buildfactor(Board *board);
 
 void shuffle(Card *deck, int len);
+void setcardstr(Card card);
+void setmovestr(Board *board, Card *fromcard, Card *tocard);
 void board_init(Board *board);
 void board_deal(Board *board);
 void board_load(Board *board, const char *pathname);
