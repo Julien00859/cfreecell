@@ -1,6 +1,5 @@
 #include <stdbool.h>
 #include <assert.h>
-#include <stdlib.h>
 #include "board.h"
 #include "stack.h"
 #include "strategy.h"

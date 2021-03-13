@@ -330,7 +330,7 @@ void board_load(Board *board, const char *pathname) {
 	}
 }
 
-void setcardstr(Card card) {
+void setcardstr(Card card, char *cardstr) {
     cardstr[0] = ' ';
     if (card.value == 0) {
         cardstr[1] = cardstr[2] = ' ';
@@ -351,9 +351,11 @@ void setcardstr(Card card) {
         case 2: cardstr[2] = 'H'; break;
         case 3: cardstr[2] = 'D'; break;
     }
+
+    cardstr[3] = '\0';
 }
 
-void setmovestr(Board *board, Card *fromcard, Card *tocard) {
+void setmovestr(Board *board, Card *fromcard, Card *tocard, char *movestr) {
     if (fromcard >= (Card*) board->columns) {
         movestr[0] = '1' + ((fromcard - (Card*) board->columns) / MAXCOLEN);
     } else if (fromcard >= (Card*) board->foundation) {
@@ -369,6 +371,7 @@ void setmovestr(Board *board, Card *fromcard, Card *tocard) {
     } else {
         movestr[1] = 'a' + ((tocard - (Card*) board->freecell));
     }
+    movestr[2] = '\0';
 }
 
 /**
@@ -376,20 +379,21 @@ void setmovestr(Board *board, Card *fromcard, Card *tocard) {
  */
 void board_show(Board *board) {
 	int row, col;
+    char cardstr[4] = "   ";
 
 	for (col = 0; col < 4; col++) {
-		setcardstr(board->freecell[col]);
+		setcardstr(board->freecell[col], cardstr);
 		printf("%s ", cardstr);
 	}
 	printf("|");
 	for (col = 0; col < 4; col++) {
-		setcardstr(board->foundation[col][board->fdlen[col]-1]);
+		setcardstr(board->foundation[col][board->fdlen[col]-1], cardstr);
 		printf(" %s", cardstr);
 	}
 	printf("\n---------------------------------\n");
 	for (row = 0; row < 10; row++) {
 		for (col = 0; col < 8; col++) {
-			setcardstr(board->columns[col][row]);
+			setcardstr(board->columns[col][row], cardstr);
 			printf(" %s", cardstr);
 		}
 		printf("\n");

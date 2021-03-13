@@ -144,6 +144,8 @@ int main(int argc, char *argv[]) {
 	Card *tocard;
     HashSet *visited;
     HashSetConf conf;
+    char cardstr[4] = "   ";
+    char movestr[3] = "  ";
 
     // Initiate an empty board
 	board_init(&board);
@@ -194,8 +196,9 @@ int main(int argc, char *argv[]) {
             while (stack_size(leaf->goal->nextmoves)) {
                 stack_pop(leaf->goal->nextmoves, (void**)&tocard);
                 stack_pop(leaf->goal->nextmoves, (void**)&fromcard);
-                setcardstr(*fromcard);
-                setmovestr(&board, fromcard, tocard);
+                move(&board, tocard, fromcard);
+                setcardstr(*fromcard, cardstr);
+                setmovestr(&board, fromcard, tocard, movestr);
                 printf("%s (%s)\n", movestr, cardstr);
             }
             stack_destroy(leaf->goal->nextmoves);
