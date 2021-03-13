@@ -5,15 +5,14 @@
 #include <stdint.h>
 #include "board.h"
 #include "stack.h"
+#include "strategy.h"
+#include "hashset.h"
 
 typedef struct node {
 	struct node *parent;
-	Card *lastfromcard;
-	Card *lasttocard;
+	Goal *goal;
 } Node;
 
-//void listmoves(Board *board, Stack * nextmoves, Node *node);
-//int play_cost(Board *board, Card *tocard);
-Node* search(Board *board, Node *currentnode);
+Node* search(Board *board, HashSet *visited);
 
 #endif
