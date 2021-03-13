@@ -4,16 +4,16 @@
 #include "stack.h"
 
 enum strat {
-    STRAT_NULL,   // When we are still searching
-    STRAT_RULE_OF_TWO,
-    STRAT_BUILD_DOWN,
-    STRAT_BUILD_EMPTY,
-    STRAT_ACCESS_LOW_CARD,
-    STRAT_ACCESS_BUILD_CARD,
-    STRAT_ACCESS_EMPTY,
-    STRAT_ANY_MOVE_CASCADE,
-    STRAT_ANY_MOVE_FOUNDATION,
-    STRAT_ANY_MOVE_FREECELL,  // Last resort
+    STRAT_NULL = 0,   // When we are still searching
+    STRAT_RULE_OF_TWO = 1,
+    STRAT_BUILD_DOWN = 2,
+    STRAT_BUILD_EMPTY = 3,
+    STRAT_ACCESS_LOW_CARD = 4,
+    STRAT_ACCESS_BUILD_CARD = 5,
+    STRAT_ACCESS_EMPTY = 6,
+    STRAT_ANY_MOVE_CASCADE = 7,
+    STRAT_ANY_MOVE_FOUNDATION = 8,
+    STRAT_ANY_MOVE_FREECELL = 9,  // Last resort
 };
 
 typedef struct goal {
