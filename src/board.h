@@ -76,7 +76,7 @@ void move(Board *board, Card *card1, Card *card2);
 void humanmove(Board *board, int fromcol, int tocol);
 int supermove_depth(Board *board, int fromcol, int tocol);
 bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextmoves);
-bool _deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_card_cnt, int card_cnt, Stack *nextmoves);
+bool deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_card_cnt, int card_cnt, Stack *nextmoves);
 bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empty);
 
 #endif

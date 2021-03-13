@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #ifndef FREECELL_ISORT_H
 #define FREECELL_ISORT_H
 

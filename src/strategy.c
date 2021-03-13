@@ -245,7 +245,7 @@ void strat_build_empty(Board *board, Goal *goal) {
  * Find a card that is low and destruct the column to access it
  */
 void strat_access_low_card(Board *board, Goal *goal) {
-	int i, suit, minvalue, freecell, freecol, depth;
+	int i, suit;
 	int suits[4] = {0, 1, 2, 3};
 	Card low_card, *card;
 	CardPosPair cpp;
@@ -274,7 +274,7 @@ void strat_access_low_card(Board *board, Goal *goal) {
         }
 
         // Spread cards around until ours is accessible
-        if (!superaccess(board, cpp, goal->nextmoves)) continue;
+        if (!superaccess(board, cpp, goal->nextmoves, true)) continue;
 
         // Low card found at bottom of column, from column to foundation
         stack_push(goal->nextmoves, bottom_card(board, cpp.col));
@@ -321,7 +321,7 @@ void strat_access_build_card(Board *board, Goal *goal) {
             if (cpp.row >= board->colen[cpp.col] - board->sortdepth[cpp.col]) continue;
 
             // Spread cards around until ours is accessible
-            if (!superaccess(board, cpp, goal->nextmoves)) continue;
+            if (!superaccess(board, cpp, goal->nextmoves, true)) continue;
 
             // There is a chance the card of the other symbol (same color)
             // was under the build_card, in such case there is a change it

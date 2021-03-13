@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/random.h>
 #include <unistd.h>
 #include "board.h"
 #include "freecell.h"
@@ -10,20 +9,15 @@
 #include "xxhash.h"
 #include "hashset.h"
 
-// Stats
-unsigned long long play_cnt;
-unsigned long long nodes_cnt;
-unsigned long int start_time;
-
 // Hashset hash function but the object is hashed already
 size_t hash_hashkey(const void *key, int l, uint32_t seed) {
-    return *(size_t*)key;
+    return (size_t)key;
 }
 
 // Hashset comparison function but the object is hashed already
 int comp_hashkey(const void *k1, const void *k2) {
-    XXH64_hash_t h1 = *(XXH64_hash_t*)k1;
-    XXH64_hash_t h2 = *(XXH64_hash_t*)k2;
+    XXH64_hash_t h1 = (XXH64_hash_t)k1;
+    XXH64_hash_t h2 = (XXH64_hash_t)k2;
 
     if (h1 < h2) return -1;
     if (h1 > h2) return 1;
@@ -41,7 +35,7 @@ Node* search(Board *board, HashSet *visited) {
 
     // There are many strategy sorted in this array by preference, each
     // index also map to the internal value of the "strat" enum.
-    void (*strategies[])(Board *board, Goal *goal) = {
+    void (*strategies[])(Board *, Goal *) = {
             NULL,
             strat_rule_of_two,
             strat_build_down,
@@ -155,7 +149,7 @@ int main(int argc, char *argv[]) {
 	board_init(&board);
 
 	if (argc == 1) {
-	    printf("usage: %s <seed>\n       %s _ <path>\n");
+	    printf("usage: %s <seed>\n       %s _ <path>\n", argv[0], argv[0]);
 	    return 1;
 	} else if (argc == 2) {
 		srand(strtol(argv[1], NULL, 10));
@@ -183,7 +177,7 @@ int main(int argc, char *argv[]) {
 	leaf = search(&board, visited);
 
 	if (is_game_won(&board)) {
-	    printf("Game solved! Most recent move first.");
+	    printf("Game solved! Most recent move first.\n");
         while (leaf) {
             switch (leaf->goal->strat) {
                 case STRAT_RULE_OF_TWO: printf("Rule of two\n"); break;

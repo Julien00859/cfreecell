@@ -173,7 +173,7 @@ void compute_sortdepth_col(Board *board, int col) {
  * build on columns where a lot of low value cards are blocked.
  */
 void compute_buildfactor(Board *board) {
-	int col, row;
+	int col;
 	Card *highcard, *card;
 
 	for (col = 0; col < 8; col++) {
@@ -203,7 +203,7 @@ void shuffle(Card *deck, int len) {
 	Card tmp;
 
 	for (i = 0; i < len; i++) {
-		r = rand() % len;
+		r = random() % len;
 		tmp = deck[i];
 		deck[i] = deck[r];
 		deck[r] = tmp;
@@ -357,7 +357,7 @@ void setmovestr(Board *board, Card *fromcard, Card *tocard) {
     if (fromcard >= (Card*) board->columns) {
         movestr[0] = '1' + ((fromcard - (Card*) board->columns) / MAXCOLEN);
     } else if (fromcard >= (Card*) board->foundation) {
-        movestr[0] = 'h';
+        assert(0);  // Cannot move from foundation
     } else {
         movestr[0] = 'a' + ((fromcard - (Card*) board->freecell));
     }
@@ -555,14 +555,14 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 		tocard = bottom_card(board, col);
 		for (row = 0; row <= freecell; row++) {
 			if (!is_move_valid(*(fromcard - row), *tocard, 'c')) continue;
-			return _deepsupermove(board, fromcol, col, tocol, card_cnt, row + 1, nextmoves);
+			return deepsupermove(board, fromcol, col, tocol, card_cnt, row + 1, nextmoves);
 		}
 	}
 
 	// Deep supermove, temporary stack some cards on an empty column
 	for (col = 0; col < 8; col++) {
 		if (!is_empty(board, col) || col == tocol) continue;
-		return _deepsupermove(board, fromcol, col, tocol, card_cnt, freecell + 1, nextmoves);
+		return deepsupermove(board, fromcol, col, tocol, card_cnt, freecell + 1, nextmoves);
 	}
 
 	// Impossible to supermove
@@ -570,7 +570,7 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 }
 
 
-bool _deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_card_cnt, int card_cnt, Stack *nextmoves) {
+bool deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_card_cnt, int card_cnt, Stack *nextmoves) {
 	int i;
 	Card *fromcard, *tocard;
 
