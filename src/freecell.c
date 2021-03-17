@@ -113,6 +113,10 @@ Node* search(Board *board, HashSet *visited) {
         old_node = node;
         node = node->parent;
         free(old_node);
+
+        // The game is impossible, we backtracked above the root node
+        if (!node) return NULL;
+
         goal = node->goal;
         nextmoves = goal->nextmoves;
 
@@ -122,15 +126,14 @@ Node* search(Board *board, HashSet *visited) {
             assert(stack_pop(nextmoves, (void**)&tocard) == CC_OK);
             move(board, fromcard, tocard);
         }
+        // Recompute the various board properties
+        compute_sortdepth(board);
+        compute_buildfactor(board);
 
         // Continue searching using the previous (now current) node next's strategy
-        if (node != NULL) {
-            strat = (int)goal->strat;
-            goto RECURSION_RETURN;
-        }
-
-        // The game is impossible, we backtracked above the root node
-        return NULL;
+        strat = (int)goal->strat;
+        goal->strat = STRAT_NULL;
+        goto RECURSION_RETURN;
     }
 
     // The game is solved !
