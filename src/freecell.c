@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
     HashSetConf conf;
     char cardstr[4] = "   ";
     char movestr[3] = "  ";
+    bool won = false;
 
     // Initiate an empty board
 	board_init(&board);
@@ -182,6 +183,7 @@ int main(int argc, char *argv[]) {
 	leaf = search(&board, visited);
 
 	if (is_game_won(&board)) {
+	    won = true;
 	    printf("Game solved! Most recent move first.\n");
         while (leaf) {
             switch (leaf->goal->strat) {
@@ -217,5 +219,5 @@ int main(int argc, char *argv[]) {
 	hashset_remove_all(visited);
 	hashset_destroy(visited);
 
-	return is_game_won(&board) ? 0 : 1;
+	return won ? 0 : 1;
 }
