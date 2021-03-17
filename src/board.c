@@ -286,47 +286,51 @@ void board_deal(Board *board) {
 void board_load(Board *board, const char *pathname) {
 	int fd, row, col;
 	char line[32];
+	int depth[8] = {1, 1, 1, 1, 1, 1, 1, 1};
 	Card newcard;
 
-	fd = open(pathname, O_RDONLY);
-	assert(fd > 2);
-	newcard._padding = 0;
-	for (row = 1; row < 8; row++) {
-		assert(read(fd, line, 32));
-		for (col = 0; col < (row == 7 ? 4 : 8); col++) {
-			switch (line[col * 4 + 1]) {
-				case 'A':
-				case '1': newcard.value = 1; break;
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9': newcard.value = line[col * 4 + 1] - '0'; break;
-				case '0': newcard.value = 10; break;
-				case 'J': newcard.value = 11; break;
-				case 'Q': newcard.value = 12; break;
-				case 'K': newcard.value = 13; break;
+    fd = open(pathname, O_RDONLY);
+    assert(fd > 2);
+    newcard._padding = 0;
+    for (row = 1; row < MAXCOLEN; row++) {
+        if (!read(fd, line, 32)) break;
+        for (col = 0; col < 8; col++) {
+            switch (line[col * 4 + 1]) {
+                case ' ': newcard.value = nullcard.value; break;
+                case '1': newcard.value = 1; break;
+                case 'A':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9': newcard.value = line[col * 4 + 1] - '0'; break;
+                case '0': newcard.value = 10; break;
+                case 'J': newcard.value = 11; break;
+                case 'Q': newcard.value = 12; break;
+                case 'K': newcard.value = 13; break;
 				default: assert(0);
 			}
 			switch (line[col * 4 + 2]) {
+                case ' ': newcard.color = nullcard.color; newcard.symbol = nullcard.symbol; break;
 				case 'S': newcard.color = 0; newcard.symbol = 0; break;
 				case 'C': newcard.color = 0; newcard.symbol = 1; break;
 				case 'H': newcard.color = 1; newcard.symbol = 0; break;
 				case 'D': newcard.color = 1; newcard.symbol = 1; break;
 				default: assert(0);
 			}
+			if (!is_nullcard(newcard)) {
+			    assert(depth[col] == row);
+			    depth[col]++;
+			}
 			board->columns[col][row] = newcard;
 		}
 	}
 	assert(close(fd) == 0);
-	for (col = 0; col < 4; col++) {
-		board->colen[col] = 8;
-	}
-	for (col = 4; col < 8; col++) {
-		board->colen[col] = 7;
+	for (col = 0; col < 8; col++) {
+		board->colen[col] = depth[col];
 	}
 }
 
