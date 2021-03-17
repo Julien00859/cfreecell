@@ -16,10 +16,10 @@
  * Immutable card, there are 52 + the nullcard
  */
 typedef struct card {
-	unsigned int _padding:2;
-	unsigned int color:1;
-	unsigned int symbol:1;
-	unsigned int value:4;
+    uint8_t _padding:2;
+    uint8_t color:1;
+    uint8_t symbol:1;
+    uint8_t value:4;
 } Card;
 
 /**

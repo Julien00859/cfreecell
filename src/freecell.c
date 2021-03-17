@@ -88,9 +88,9 @@ Node* search(Board *board, HashSet *visited) {
         compute_buildfactor(board);
 
         // Test all strategies on un-visited boards
-        board_hash = XXH3_64bits(board, (size_t*)board->fdlen - (size_t*)board);
+        board_hash = XXH3_64bits(board, offsetof(Board, fdlen));
         if (!hashset_contains(visited, (void*)board_hash)) {
-            hashset_add(visited, (void*)board_hash);
+            assert(hashset_add(visited, (void*)board_hash) == CC_OK);
 
             for (strat = 1; strat < 10; strat++) {
                 goal->a = goal_inits[strat][0];
