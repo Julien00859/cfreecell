@@ -384,6 +384,7 @@ void setmovestr(Board *board, Card *fromcard, Card *tocard, char *movestr) {
 void board_show(Board *board) {
 	int row, col;
     char cardstr[4] = "   ";
+    bool all_nullcard;
 
 	for (col = 0; col < 4; col++) {
 		setcardstr(board->freecell[col], cardstr);
@@ -395,12 +396,15 @@ void board_show(Board *board) {
 		printf(" %s", cardstr);
 	}
 	printf("\n---------------------------------\n");
-	for (row = 0; row < 10; row++) {
+	for (row = 0; row < MAXCOLEN; row++) {
+	    all_nullcard = true;
 		for (col = 0; col < 8; col++) {
+            all_nullcard &= is_nullcard(board->columns[col][row]);
 			setcardstr(board->columns[col][row], cardstr);
 			printf(" %s", cardstr);
 		}
 		printf("\n");
+		if (row && all_nullcard) break;
 	}
 }
 
