@@ -147,7 +147,8 @@ int main(int argc, char *argv[]) {
 	Card *tocard;
     HashSet *visited;
     HashSetConf conf;
-    char cardstr[4] = "   ";
+    char fromcardstr[4] = "   ";
+    char tocardstr[4] = "   ";
     char movestr[3] = "  ";
     bool won = false;
 
@@ -202,9 +203,10 @@ int main(int argc, char *argv[]) {
                 stack_pop(leaf->goal->nextmoves, (void**)&tocard);
                 stack_pop(leaf->goal->nextmoves, (void**)&fromcard);
                 move(&board, tocard, fromcard);
-                setcardstr(*fromcard, cardstr);
+                setcardstr(*fromcard, fromcardstr);
+                setcardstr(*(tocard - (tocard < (Card*)board.foundation ? 0 : 1)), tocardstr);
                 setmovestr(&board, fromcard, tocard, movestr);
-                printf("%s (%s)\n", movestr, cardstr);
+                printf("%s: %s -> %s\n", movestr, fromcardstr, tocardstr);
             }
             stack_destroy(leaf->goal->nextmoves);
             free(leaf->goal);
