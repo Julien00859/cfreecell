@@ -490,7 +490,7 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 	 * Move C3 {5, 4, 3, 2} -> C1 | 3 freecells | 3a 3b 34 31 41 b1 a1
 	 */
 
-	int freecell, col, row;
+	int freecell, col, row, depth;
 	Card *fromcard, *tocard;
 	Stack *tempmoves;
 
@@ -530,9 +530,9 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 		    // Move impossible, undo stacking
             while (stack_size(tempmoves)) {
                 fromcard++;
-                stack_pop(nextmoves, NULL);
-                stack_pop(nextmoves, NULL);
-                stack_pop(tempmoves, (void**)&tocard);
+                assert(stack_pop(nextmoves, NULL) == CC_OK);
+                assert(stack_pop(nextmoves, NULL) == CC_OK);
+                assert(stack_pop(tempmoves, (void**)&tocard) == CC_OK);
                 move(board, tocard, fromcard);
             }
             return false;
@@ -558,19 +558,18 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 	}
 
 	// Deep supermove, temporary stack some cards on a non-empty column
+    compute_sortdepth_col(board, fromcol);
 	for (col = 0; col < 8; col++) {
-		if (is_empty(board, col) || col == tocol) continue;
-		tocard = bottom_card(board, col);
-		for (row = 0; row <= freecell; row++) {
-			if (!is_move_valid(*(fromcard - row), *tocard, 'c')) continue;
-			return deepsupermove(board, fromcol, col, tocol, card_cnt, row + 1, nextmoves);
-		}
+		if (is_empty(board, col) || col == fromcol || col == tocol) continue;
+        depth = supermove_depth(board, fromcol, col);
+        if (depth && depth <= freecell + 1)
+		    return deepsupermove(board, fromcol, col, tocol, card_cnt, depth, nextmoves);
 	}
 
 	// Deep supermove, temporary stack some cards on an empty column
 	for (col = 0; col < 8; col++) {
 		if (!is_empty(board, col) || col == tocol) continue;
-		return deepsupermove(board, fromcol, col, tocol, card_cnt, freecell + 1, nextmoves);
+		return deepsupermove(board, fromcol, col, tocol, card_cnt, freecell, nextmoves);
 	}
 
 	// Impossible to supermove
@@ -582,7 +581,7 @@ bool deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_
 	int i;
 	Card *fromcard, *tocard;
 
-	supermove(board, fromcol, tempcol, card_cnt, nextmoves);
+	assert(supermove(board, fromcol, tempcol, card_cnt, nextmoves));
 	if (!supermove(board, fromcol, tocol, total_card_cnt - card_cnt, nextmoves)) {
 		// Undo the first supermove
 		for (i = 0; i < card_cnt * 2 - 1; i++) {
@@ -592,7 +591,7 @@ bool deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_
 		}
 		return false;
 	}
-	supermove(board, tempcol, tocol, card_cnt, nextmoves);
+	assert(supermove(board, tempcol, tocol, card_cnt, nextmoves));
 	return true;
 }
 
