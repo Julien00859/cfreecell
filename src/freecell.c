@@ -151,6 +151,7 @@ int main(int argc, char *argv[]) {
     char tocardstr[4] = "   ";
     char movestr[3] = "  ";
     bool won = false;
+    int moves_cnt;
 
     // Initiate an empty board
 	board_init(&board);
@@ -171,8 +172,9 @@ int main(int argc, char *argv[]) {
      * Because the board itself is mutable, it is unsafe to use it
      * as hash key. We instead manually hash the board to "freeze"
      * it. The hash key is a hash already, the above hash_hashkey
-     * and comp_hashkey just passthrough the manually computed hash
-     * and compare the hash themselves. */
+     * and comp_hashkey functions just passthrough the manually
+     * computed hash and compare the hash directly (there is no
+     * re-hash like in a "normal" hashset). */
     hashset_conf_init(&conf);
     conf.hash = hash_hashkey;
     conf.key_compare = comp_hashkey;
@@ -186,19 +188,21 @@ int main(int argc, char *argv[]) {
 	if (is_game_won(&board)) {
 	    won = true;
 	    printf("Game solved! Most recent move first.\n");
+        moves_cnt = 0;
         while (leaf) {
             switch (leaf->goal->strat) {
-                case STRAT_RULE_OF_TWO: printf("Rule of two\n"); break;
-                case STRAT_BUILD_DOWN: printf("Build down\n"); break;
-                case STRAT_BUILD_EMPTY: printf("Build empty\n"); break;
-                case STRAT_ACCESS_LOW_CARD: printf("Access low card\n"); break;
-                case STRAT_ACCESS_BUILD_CARD: printf("Access build card\n"); break;
-                case STRAT_ACCESS_EMPTY: printf("Empty column\n"); break;
-                case STRAT_ANY_MOVE_CASCADE: printf("Move any card(s) on the cascades\n"); break;
-                case STRAT_ANY_MOVE_FOUNDATION: printf("Move any card to the foundation\n"); break;
-                case STRAT_ANY_MOVE_FREECELL: printf("Move any card(s) to the freecells\n"); break;
+                case STRAT_RULE_OF_TWO: printf("Rule of two:\n"); break;
+                case STRAT_BUILD_DOWN: printf("Build down:\n"); break;
+                case STRAT_BUILD_EMPTY: printf("Build empty:\n"); break;
+                case STRAT_ACCESS_LOW_CARD: printf("Access low card:\n"); break;
+                case STRAT_ACCESS_BUILD_CARD: printf("Access build card:\n"); break;
+                case STRAT_ACCESS_EMPTY: printf("Empty column:\n"); break;
+                case STRAT_ANY_MOVE_CASCADE: printf("Move any card(s) on the cascades:\n"); break;
+                case STRAT_ANY_MOVE_FOUNDATION: printf("Move any card to the foundation:\n"); break;
+                case STRAT_ANY_MOVE_FREECELL: printf("Move any card(s) to the freecells:\n"); break;
                 default: assert(0);
             }
+            moves_cnt += stack_size(leaf->goal->nextmoves);
             while (stack_size(leaf->goal->nextmoves)) {
                 stack_pop(leaf->goal->nextmoves, (void**)&tocard);
                 stack_pop(leaf->goal->nextmoves, (void**)&fromcard);
@@ -206,7 +210,7 @@ int main(int argc, char *argv[]) {
                 setcardstr(*fromcard, fromcardstr);
                 setcardstr(*(tocard - (tocard < (Card*)board.foundation ? 0 : 1)), tocardstr);
                 setmovestr(&board, fromcard, tocard, movestr);
-                printf("%s: %s -> %s\n", movestr, fromcardstr, tocardstr);
+                printf("  %s: %s -> %s\n", movestr, fromcardstr, tocardstr);
             }
             stack_destroy(leaf->goal->nextmoves);
             free(leaf->goal);
@@ -214,8 +218,9 @@ int main(int argc, char *argv[]) {
             leaf = leaf->parent;
             free(old_leaf);
         }
+        printf("Solution in %d steps.\n", moves_cnt);
     } else {
-	    printf("Game is unsolvable.");
+	    printf("Game is unsolvable.\n");
 	}
 
 	hashset_remove_all(visited);
