@@ -600,17 +600,17 @@ bool deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_
 }
 
 bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empty) {
-    int row, tocol, depth, freecell_cnt, empty_cols_cnt;
+    int row, tocol, size, depth, freecell_cnt, empty_cols_cnt;
     Card *fromcard, *tocard;
     Card *empty_cols[8];
     Card *freecells[4];
 
-    assert(!stack_size(nextmoves));
+    size = stack_size(nextmoves);
 
     empty_cols_cnt=0;
     for (tocol = 0; tocol < 8; tocol++)
         if (is_empty(board, tocol))
-            empty_cols[empty_cols_cnt++] = &board->columns[tocol][0];
+            empty_cols[empty_cols_cnt++] = &board->columns[tocol][1];
     freecell_cnt=0;
     for (tocol = 0; tocol < 4; tocol++)
         if (is_nullcard(board->freecell[tocol]))
@@ -621,7 +621,7 @@ bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empt
     while (row > cpp.row) {
         // Supermove to another column
         for (tocol = 0; tocol < 8; tocol++) {
-            if (is_empty(board, tocol)) continue;
+            if (is_empty(board, tocol) || tocol == cpp.col) continue;
             depth = supermove_depth(board, cpp.col, tocol);
             if (0 < depth && depth < row - cpp.row) {
                 if (!supermove(board, cpp.col, tocol, depth, nextmoves)) continue;
@@ -644,7 +644,7 @@ bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empt
         // Stack on a freecell or (in last resort) an empty column
         fromcard = &board->columns[cpp.col][row];
         if (freecell_cnt || (use_empty && empty_cols_cnt)) {
-            tocard = freecell_cnt ? freecells[freecell_cnt--] : empty_cols[empty_cols_cnt--];
+            tocard = freecell_cnt ? freecells[--freecell_cnt] : empty_cols[--empty_cols_cnt];
             assert(stack_push(nextmoves, fromcard) == CC_OK);
             assert(stack_push(nextmoves, tocard) == CC_OK);
             move(board, fromcard, tocard);
@@ -662,7 +662,7 @@ bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empt
         return true;
 
     // Couldn't unstack enough card, restore initial state
-    while (stack_size(nextmoves)) {
+    while (size < stack_size(nextmoves)) {
         assert(stack_pop(nextmoves, (void**)&fromcard) == CC_OK);
         assert(stack_pop(nextmoves, (void**)&tocard) == CC_OK);
         move(board, fromcard, tocard);

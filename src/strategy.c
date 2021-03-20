@@ -253,7 +253,7 @@ void strat_access_low_card(Board *board, Goal *goal) {
 
 	for (i = goal->a; i < 4; i++) {  // i = 0
 	    suit = suits[i];
-        low_card.color = suit & 0b10;
+        low_card.color = (suit & 0b10) > 1;
         low_card.symbol = suit & 0b01;
         low_card.value = board->fdlen[suit];
 
