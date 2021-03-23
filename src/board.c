@@ -94,10 +94,10 @@ bool is_game_won(Board *board) {
  * Determines if two card are equals
  */
 bool are_card_equal(Card c1, Card c2) {
-    if (c1.value != c2.value) return false;
-    if (c1.symbol != c2.symbol) return false;
-    if (c1.color != c2.color) return false;
-    return true;
+	if (c1.value != c2.value) return false;
+	if (c1.symbol != c2.symbol) return false;
+	if (c1.color != c2.color) return false;
+	return true;
 }
 
 /**
@@ -118,28 +118,28 @@ Card* highest_sorted_card(Board *board, int col) {
  * Searches for a precise card in the cascades
  */
 CardPosPair search_card(Board *board, Card searched_card) {
-    int col, row;
-    Card *card;
-    CardPosPair cpp;
+	int col, row;
+	Card *card;
+	CardPosPair cpp;
 
-    memset(&cpp, 0, sizeof(CardPosPair));
+	memset(&cpp, 0, sizeof(CardPosPair));
 
-    for (col = 0; col < 4; col++) {
-        if (!are_card_equal(board->freecell[col], searched_card)) continue;
-        cpp.col = col;
-        cpp.row = MAXCOLEN;
-        return cpp;
-    }
+	for (col = 0; col < 4; col++) {
+		if (!are_card_equal(board->freecell[col], searched_card)) continue;
+		cpp.col = col;
+		cpp.row = MAXCOLEN;
+		return cpp;
+	}
 
-    for (col = 0; col < 8; col++) {
-        for (row = 1, card = bottom_card(board, col); !is_nullcard(*card); row++, card--) {
-            if (!are_card_equal(searched_card, *card)) continue;
-            cpp.col = col;
-            cpp.row = board->colen[col] - row;
-            return cpp;
-        }
-    }
-    assert(false);
+	for (col = 0; col < 8; col++) {
+		for (row = 1, card = bottom_card(board, col); !is_nullcard(*card); row++, card--) {
+			if (!are_card_equal(searched_card, *card)) continue;
+			cpp.col = col;
+			cpp.row = board->colen[col] - row;
+			return cpp;
+		}
+	}
+	assert(false);
 }
 
 /**
@@ -148,22 +148,22 @@ CardPosPair search_card(Board *board, Card searched_card) {
  */
 void compute_sortdepth(Board *board) {
 	int col;
-    for (col = 0; col < 8; col++) {
-        compute_sortdepth_col(board, col);
-    }
+	for (col = 0; col < 8; col++) {
+		compute_sortdepth_col(board, col);
+	}
 }
 
 void compute_sortdepth_col(Board *board, int col) {
-    int depth;
-    Card *card;
+	int depth;
+	Card *card;
 
-    card = bottom_card(board, col);
-    depth = !is_nullcard(*card);
-    while(!is_nullcard(*(card - 1)) && is_move_valid(*card, *(card - 1), 'c')) {
-        depth++;
-        card--;
-    }
-    board->sortdepth[col] = depth;
+	card = bottom_card(board, col);
+	depth = !is_nullcard(*card);
+	while(!is_nullcard(*(card - 1)) && is_move_valid(*card, *(card - 1), 'c')) {
+		depth++;
+		card--;
+	}
+	board->sortdepth[col] = depth;
 }
 
 /**
@@ -289,32 +289,32 @@ void board_load(Board *board, const char *pathname) {
 	int depth[8] = {1, 1, 1, 1, 1, 1, 1, 1};
 	Card newcard;
 
-    fd = open(pathname, O_RDONLY);
-    assert(fd > 2);
-    newcard._padding = 0;
-    for (row = 1; row < MAXCOLEN; row++) {
-        if (!read(fd, line, 32)) break;
-        for (col = 0; col < 8; col++) {
-            switch (line[col * 4 + 1]) {
-                case ' ': newcard.value = nullcard.value; break;
-                case '1': newcard.value = 1; break;
-                case 'A':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9': newcard.value = line[col * 4 + 1] - '0'; break;
-                case '0': newcard.value = 10; break;
-                case 'J': newcard.value = 11; break;
-                case 'Q': newcard.value = 12; break;
-                case 'K': newcard.value = 13; break;
+	fd = open(pathname, O_RDONLY);
+	assert(fd > 2);
+	newcard._padding = 0;
+	for (row = 1; row < MAXCOLEN; row++) {
+		if (!read(fd, line, 32)) break;
+		for (col = 0; col < 8; col++) {
+			switch (line[col * 4 + 1]) {
+				case ' ': newcard.value = nullcard.value; break;
+				case '1': newcard.value = 1; break;
+				case 'A':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9': newcard.value = line[col * 4 + 1] - '0'; break;
+				case '0': newcard.value = 10; break;
+				case 'J': newcard.value = 11; break;
+				case 'Q': newcard.value = 12; break;
+				case 'K': newcard.value = 13; break;
 				default: assert(0);
 			}
 			switch (line[col * 4 + 2]) {
-                case ' ': newcard.color = nullcard.color; newcard.symbol = nullcard.symbol; break;
+				case ' ': newcard.color = nullcard.color; newcard.symbol = nullcard.symbol; break;
 				case 'S': newcard.color = 0; newcard.symbol = 0; break;
 				case 'C': newcard.color = 0; newcard.symbol = 1; break;
 				case 'H': newcard.color = 1; newcard.symbol = 0; break;
@@ -322,8 +322,8 @@ void board_load(Board *board, const char *pathname) {
 				default: assert(0);
 			}
 			if (!is_nullcard(newcard)) {
-			    assert(depth[col] == row);
-			    depth[col]++;
+				assert(depth[col] == row);
+				depth[col]++;
 			}
 			board->columns[col][row] = newcard;
 		}
@@ -335,47 +335,47 @@ void board_load(Board *board, const char *pathname) {
 }
 
 void setcardstr(Card card, char *cardstr) {
-    cardstr[0] = ' ';
-    if (card.value == 0) {
-        cardstr[1] = cardstr[2] = ' ';
-        return;
-    }
+	cardstr[0] = ' ';
+	if (card.value == 0) {
+		cardstr[1] = cardstr[2] = ' ';
+		return;
+	}
 
-    switch (card.value) {
-        case 10: cardstr[0] = '1'; cardstr[1] = '0'; break;
-        case 11: cardstr[1] = 'J'; break;
-        case 12: cardstr[1] = 'Q'; break;
-        case 13: cardstr[1] = 'K'; break;
-        default: cardstr[1] = '0' + (char) card.value;
-    }
+	switch (card.value) {
+		case 10: cardstr[0] = '1'; cardstr[1] = '0'; break;
+		case 11: cardstr[1] = 'J'; break;
+		case 12: cardstr[1] = 'Q'; break;
+		case 13: cardstr[1] = 'K'; break;
+		default: cardstr[1] = '0' + (char) card.value;
+	}
 
-    switch (card.color * 2 + card.symbol) {
-        case 0: cardstr[2] = 'S'; break;
-        case 1: cardstr[2] = 'C'; break;
-        case 2: cardstr[2] = 'H'; break;
-        case 3: cardstr[2] = 'D'; break;
-    }
+	switch (card.color * 2 + card.symbol) {
+		case 0: cardstr[2] = 'S'; break;
+		case 1: cardstr[2] = 'C'; break;
+		case 2: cardstr[2] = 'H'; break;
+		case 3: cardstr[2] = 'D'; break;
+	}
 
-    cardstr[3] = '\0';
+	cardstr[3] = '\0';
 }
 
 void setmovestr(Board *board, Card *fromcard, Card *tocard, char *movestr) {
-    if (fromcard >= (Card*) board->columns) {
-        movestr[0] = '1' + ((fromcard - (Card*) board->columns) / MAXCOLEN);
-    } else if (fromcard >= (Card*) board->foundation) {
-        assert(0);  // Cannot move from foundation
-    } else {
-        movestr[0] = 'a' + ((fromcard - (Card*) board->freecell));
-    }
+	if (fromcard >= (Card*) board->columns) {
+		movestr[0] = '1' + ((fromcard - (Card*) board->columns) / MAXCOLEN);
+	} else if (fromcard >= (Card*) board->foundation) {
+		assert(0);  // Cannot move from foundation
+	} else {
+		movestr[0] = 'a' + ((fromcard - (Card*) board->freecell));
+	}
 
-    if (tocard >= (Card*) board->columns) {
-        movestr[1] = '1' + ((tocard - (Card*) board->columns) / MAXCOLEN);
-    } else if (tocard >= (Card*) board->foundation) {
-        movestr[1] = 'h';
-    } else {
-        movestr[1] = 'a' + ((tocard - (Card*) board->freecell));
-    }
-    movestr[2] = '\0';
+	if (tocard >= (Card*) board->columns) {
+		movestr[1] = '1' + ((tocard - (Card*) board->columns) / MAXCOLEN);
+	} else if (tocard >= (Card*) board->foundation) {
+		movestr[1] = 'h';
+	} else {
+		movestr[1] = 'a' + ((tocard - (Card*) board->freecell));
+	}
+	movestr[2] = '\0';
 }
 
 /**
@@ -383,8 +383,8 @@ void setmovestr(Board *board, Card *fromcard, Card *tocard, char *movestr) {
  */
 void board_show(Board *board) {
 	int row, col;
-    char cardstr[4] = "   ";
-    bool all_nullcard;
+	char cardstr[4] = "   ";
+	bool all_nullcard;
 
 	for (col = 0; col < 4; col++) {
 		setcardstr(board->freecell[col], cardstr);
@@ -397,9 +397,9 @@ void board_show(Board *board) {
 	}
 	printf("\n---------------------------------\n");
 	for (row = 0; row < MAXCOLEN; row++) {
-	    all_nullcard = true;
+		all_nullcard = true;
 		for (col = 0; col < 8; col++) {
-            all_nullcard &= is_nullcard(board->columns[col][row]);
+			all_nullcard &= is_nullcard(board->columns[col][row]);
 			setcardstr(board->columns[col][row], cardstr);
 			printf(" %s", cardstr);
 		}
@@ -433,18 +433,18 @@ void move(Board *board, Card *card1, Card *card2) {
 }
 
 void humanmove(Board *board, int fromcol, int tocol) {
-    int suit;
-    Card *fromcard, *tocard;
+	int suit;
+	Card *fromcard, *tocard;
 
-    if (fromcol >= 10) fromcard = &(board->freecell[fromcol - 10]);
-    else fromcard = bottom_card(board, fromcol - 1);
+	if (fromcol >= 10) fromcard = &(board->freecell[fromcol - 10]);
+	else fromcard = bottom_card(board, fromcol - 1);
 
-    suit = fromcard->color * 2 + fromcard->symbol;
-    if (tocol == 0) tocard = &(board->foundation[suit][board->fdlen[suit]]);
-    else if (tocol >= 10) tocard = &(board->freecell[tocol-10]);
-    else tocard = bottom_card(board, tocol - 1) + 1;
+	suit = fromcard->color * 2 + fromcard->symbol;
+	if (tocol == 0) tocard = &(board->foundation[suit][board->fdlen[suit]]);
+	else if (tocol >= 10) tocard = &(board->freecell[tocol-10]);
+	else tocard = bottom_card(board, tocol - 1) + 1;
 
-    move(board, fromcard, tocard);
+	move(board, fromcard, tocard);
 }
 
 int supermove_depth(Board *board, int fromcol, int tocol) {
@@ -469,27 +469,27 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 	 * with a total of 2 freecells and 4 columns whose 1 is empty. We want
 	 * to move the second (C2) column on the first (C1) column.
 	 *
-	 *    ###########
-	 *    # ___ ___ #########
-	 *    #-----------------#
-	 *    # Q   8   2   ___ #
-	 *    # J   2   6       #
-	 *    #     3           #
-	 *    #    10           #
-	 *    #     9           #
-	 *    #     8           #
-	 *    #     7           #
-	 *    #     6           #
-	 *    #     5           #
-	 *    #     4           #
-	 *    #     3           #
-	 *    #     2           #
-	 *    #                 #
-	 *    ###################
+	 *	###########
+	 *	# ___ ___ #########
+	 *	#-----------------#
+	 *	# Q   8   2   ___ #
+	 *	# J   2   6	   #
+	 *	#	 3		   #
+	 *	#	10		   #
+	 *	#	 9		   #
+	 *	#	 8		   #
+	 *	#	 7		   #
+	 *	#	 6		   #
+	 *	#	 5		   #
+	 *	#	 4		   #
+	 *	#	 3		   #
+	 *	#	 2		   #
+	 *	#				 #
+	 *	###################
 	 *
 	 * Move C2 {5, 4, 3, 2} -> C3 | 3 freecells | 2a 2b 24 23 43 b3 a3
 	 *  Move C2 {8, 7, 6} -> C4   | 2 freecells | 2a 2b 24 b4 a4
-	 *   Move C2 {10, 9} -> C1    | 2 freecells | 2a 21 a1
+	 *   Move C2 {10, 9} -> C1	| 2 freecells | 2a 21 a1
 	 *  Move C4 {8, 7, 6} -> C1   | 2 freecells | 4a 4b 41 b1 a1
 	 * Move C3 {5, 4, 3, 2} -> C1 | 3 freecells | 3a 3b 34 31 41 b1 a1
 	 */
@@ -531,16 +531,16 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 
 		// No freecell left, this card must move otherwise the move is impossible
 		if (!is_move_valid(*fromcard, *tocard, 'c')) {
-		    // Move impossible, undo stacking
-            while (stack_size(tempmoves)) {
-                fromcard++;
-                assert(stack_pop(nextmoves, NULL) == CC_OK);
-                assert(stack_pop(nextmoves, NULL) == CC_OK);
-                assert(stack_pop(tempmoves, (void**)&tocard) == CC_OK);
-                move(board, tocard, fromcard);
-            }
-            return false;
-        }
+			// Move impossible, undo stacking
+			while (stack_size(tempmoves)) {
+				fromcard++;
+				assert(stack_pop(nextmoves, NULL) == CC_OK);
+				assert(stack_pop(nextmoves, NULL) == CC_OK);
+				assert(stack_pop(tempmoves, (void**)&tocard) == CC_OK);
+				move(board, tocard, fromcard);
+			}
+			return false;
+		}
 
 		// Move the card
 		tocard++;
@@ -562,12 +562,12 @@ bool supermove(Board *board, int fromcol, int tocol, int card_cnt, Stack * nextm
 	}
 
 	// Deep supermove, temporary stack some cards on a non-empty column
-    compute_sortdepth_col(board, fromcol);
+	compute_sortdepth_col(board, fromcol);
 	for (col = 0; col < 8; col++) {
 		if (is_empty(board, col) || col == fromcol || col == tocol) continue;
-        depth = supermove_depth(board, fromcol, col);
-        if (depth && depth <= freecell + 1)
-		    return deepsupermove(board, fromcol, col, tocol, card_cnt, depth, nextmoves);
+		depth = supermove_depth(board, fromcol, col);
+		if (depth && depth <= freecell + 1)
+			return deepsupermove(board, fromcol, col, tocol, card_cnt, depth, nextmoves);
 	}
 
 	// Deep supermove, temporary stack some cards on an empty column
@@ -600,72 +600,72 @@ bool deepsupermove(Board *board, int fromcol, int tempcol, int tocol, int total_
 }
 
 bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empty) {
-    int row, tocol, size, depth, freecell_cnt, empty_cols_cnt;
-    Card *fromcard, *tocard;
-    Card *empty_cols[8];
-    Card *freecells[4];
+	int row, tocol, size, depth, freecell_cnt, empty_cols_cnt;
+	Card *fromcard, *tocard;
+	Card *empty_cols[8];
+	Card *freecells[4];
 
-    size = stack_size(nextmoves);
+	size = stack_size(nextmoves);
 
-    empty_cols_cnt=0;
-    for (tocol = 0; tocol < 8; tocol++)
-        if (is_empty(board, tocol))
-            empty_cols[empty_cols_cnt++] = &board->columns[tocol][1];
-    freecell_cnt=0;
-    for (tocol = 0; tocol < 4; tocol++)
-        if (is_nullcard(board->freecell[tocol]))
-            freecells[freecell_cnt++] = &board->freecell[tocol];
+	empty_cols_cnt=0;
+	for (tocol = 0; tocol < 8; tocol++)
+		if (is_empty(board, tocol))
+			empty_cols[empty_cols_cnt++] = &board->columns[tocol][1];
+	freecell_cnt=0;
+	for (tocol = 0; tocol < 4; tocol++)
+		if (is_nullcard(board->freecell[tocol]))
+			freecells[freecell_cnt++] = &board->freecell[tocol];
 
-    row = board->colen[cpp.col] - 1;
-    CONTINUE:;
-    while (row > cpp.row) {
-        // Supermove to another column
-        for (tocol = 0; tocol < 8; tocol++) {
-            if (is_empty(board, tocol) || tocol == cpp.col) continue;
-            depth = supermove_depth(board, cpp.col, tocol);
-            if (0 < depth && depth < row - cpp.row) {
-                if (!supermove(board, cpp.col, tocol, depth, nextmoves)) continue;
-                compute_sortdepth_col(board, cpp.col);
-                row -= depth;
-                goto CONTINUE;
-            }
-        }
+	row = board->colen[cpp.col] - 1;
+	CONTINUE:;
+	while (row > cpp.row) {
+		// Supermove to another column
+		for (tocol = 0; tocol < 8; tocol++) {
+			if (is_empty(board, tocol) || tocol == cpp.col) continue;
+			depth = supermove_depth(board, cpp.col, tocol);
+			if (0 < depth && depth < row - cpp.row) {
+				if (!supermove(board, cpp.col, tocol, depth, nextmoves)) continue;
+				compute_sortdepth_col(board, cpp.col);
+				row -= depth;
+				goto CONTINUE;
+			}
+		}
 
-        // Supermove to an empty column
-        if (use_empty && board->sortdepth[cpp.col] > 1) {
-            for (depth = MIN(supermove_depth(board, cpp.col, tocol), row - cpp.row); depth > 1; depth--) {
-                if (!supermove(board, cpp.col, tocol, depth, nextmoves)) continue;
-                compute_sortdepth_col(board, cpp.col);
-                row -= depth;
-                goto CONTINUE;
-            }
-        }
+		// Supermove to an empty column
+		if (use_empty && board->sortdepth[cpp.col] > 1) {
+			for (depth = MIN(supermove_depth(board, cpp.col, tocol), row - cpp.row); depth > 1; depth--) {
+				if (!supermove(board, cpp.col, tocol, depth, nextmoves)) continue;
+				compute_sortdepth_col(board, cpp.col);
+				row -= depth;
+				goto CONTINUE;
+			}
+		}
 
-        // Stack on a freecell or (in last resort) an empty column
-        fromcard = &board->columns[cpp.col][row];
-        if (freecell_cnt || (use_empty && empty_cols_cnt)) {
-            tocard = freecell_cnt ? freecells[--freecell_cnt] : empty_cols[--empty_cols_cnt];
-            assert(stack_push(nextmoves, fromcard) == CC_OK);
-            assert(stack_push(nextmoves, tocard) == CC_OK);
-            move(board, fromcard, tocard);
-            compute_sortdepth_col(board, cpp.col);
-            row--;
-            continue;
-        }
+		// Stack on a freecell or (in last resort) an empty column
+		fromcard = &board->columns[cpp.col][row];
+		if (freecell_cnt || (use_empty && empty_cols_cnt)) {
+			tocard = freecell_cnt ? freecells[--freecell_cnt] : empty_cols[--empty_cols_cnt];
+			assert(stack_push(nextmoves, fromcard) == CC_OK);
+			assert(stack_push(nextmoves, tocard) == CC_OK);
+			move(board, fromcard, tocard);
+			compute_sortdepth_col(board, cpp.col);
+			row--;
+			continue;
+		}
 
-        // Cannot unstack more cards
-        break;
-    }
+		// Cannot unstack more cards
+		break;
+	}
 
-    // Wanted card is accessible
-    if (row == cpp.row)
-        return true;
+	// Wanted card is accessible
+	if (row == cpp.row)
+		return true;
 
-    // Couldn't unstack enough card, restore initial state
-    while (size < stack_size(nextmoves)) {
-        assert(stack_pop(nextmoves, (void**)&fromcard) == CC_OK);
-        assert(stack_pop(nextmoves, (void**)&tocard) == CC_OK);
-        move(board, fromcard, tocard);
-    }
-    return false;
+	// Couldn't unstack enough card, restore initial state
+	while (size < stack_size(nextmoves)) {
+		assert(stack_pop(nextmoves, (void**)&fromcard) == CC_OK);
+		assert(stack_pop(nextmoves, (void**)&tocard) == CC_OK);
+		move(board, fromcard, tocard);
+	}
+	return false;
 }
