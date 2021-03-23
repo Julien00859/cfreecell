@@ -5,6 +5,7 @@ import itertools
 import os
 import pathlib
 import subprocess as sp
+import signal
 import sys
 
 WORKERS = os.cpu_count() - 3
@@ -26,6 +27,10 @@ async def run(event):
                 await asyncio.wait_for(proc.wait(), 10)
             except asyncio.TimeoutError:
                 proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), 1)
+                except asyncio.TimeoutError:
+                    proc.kill()
 
 
 def main():
@@ -33,13 +38,7 @@ def main():
 
     loop = asyncio.new_event_loop()
     event = asyncio.Event()
-    task = loop.create_task(asyncio.wait([run(event) for _ in range(WORKERS)]))
-
-    try:
-        loop.run_until_complete(task)
-    except KeyboardInterrupt:
-        print("Stopping...", file=sys.stderr)
-        loop.call_later(.2, event.set)
-        loop.run_until_complete(task)
+    signal.signal(signal.SIGINT, lambda *_: event.set())
+    loop.run_until_complete(asyncio.wait([run(event) for _ in range(WORKERS)]))
 
 main()
