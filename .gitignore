@@ -2,3 +2,8 @@
 Collections-C-master/
 cmake-build-debug/
 freecell
+.python-version
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+stats/
