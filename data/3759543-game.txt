@@ -1,0 +1,7 @@
+ AC  5S  AH  2H  2S  7D  JH  2D
+ KD  6H  JD  8S  5H  5C  6D  9C
+ 8H  9S  AS  8C  7S  QD  4H  5D
+10S  KS  4D  KC  7H  3D  8D  KH
+10D  9D  QC  AD 10H  4C  9H  4S
+ 3H  QH  7C  JC  3C  JS  2C  QS
+10C  6S  3S  6C                
