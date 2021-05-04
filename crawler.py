@@ -72,6 +72,7 @@ def main():
             ord('♠'): 'S'
         }))
         fd.write('\n')
+    print("board saved in data", file=sys.stderr)
 
 if __name__ == '__main__':
     main()
