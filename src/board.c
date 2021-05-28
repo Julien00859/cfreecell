@@ -30,26 +30,24 @@ int count_empty_column(Board *board) {
 
 /**
  * Determines whether we can move the ``fromcard`` on the ``tocard`` given
- * where (`l` freecell, `f` foundation, `c` columns) the ``tocard`` is.
+ * where (`f` freecell, `h` foundation, `c` columns) the ``tocard`` is.
  */
 bool is_move_valid(Card fromcard, Card tocard, char destination) {
-	if (fromcard.value == 0)
+	if (is_nullcard(fromcard))
 		return false;
 
 	switch (destination) {
-		case 'l':  // freecell
-			return tocard.value == 0;
-		case 'f':  // foundation
-			return (
-				fromcard.symbol == tocard.symbol
-				&& fromcard.value == tocard.value + 1
+		case 'f':  // freecell
+			return tocard.rank == 0;
+		case 'h':  // foundation
+			return (fromcard.color == tocard.color
+				&& fromcard.suit == tocard.suit
+				&& fromcard.rank == tocard.rank + 1
 			);
 		case 'c':  // column
-			return (
-				tocard.value == 0
-				|| (
+			return (is_nullcard(tocard) || (
 					fromcard.color != tocard.color
-					&& fromcard.value == tocard.value - 1
+					&& fromcard.rank == tocard.rank - 1
 				)
 			);
 		default:
@@ -61,21 +59,21 @@ bool is_move_valid(Card fromcard, Card tocard, char destination) {
  * Determines whether the specified card is nullcard.
  */
 bool is_nullcard(Card card) {
-	return card.value == nullcard.value;
+	return card.rank == nullcard.rank;
 }
 
 /**
  * Determines whether the specified column is empty.
  */
 bool is_empty(Board *board, int col) {
-	return board->colen[col] == 1;
+	return board->cslen[col] == 1;
 }
 
 /**
  * Determines if the specified column is fully sorted.
  */
 bool is_fully_sorted(Board *board, int col) {
-	return board->sortdepth[col] == board->colen[col] - 1;
+	return board->sortdepth[col] == board->cslen[col] - 1;
 }
 
 /**
@@ -94,8 +92,8 @@ bool is_game_won(Board *board) {
  * Determines if two card are equals
  */
 bool are_card_equal(Card c1, Card c2) {
-	if (c1.value != c2.value) return false;
-	if (c1.symbol != c2.symbol) return false;
+	if (c1.rank != c2.rank) return false;
+	if (c1.suit != c2.suit) return false;
 	if (c1.color != c2.color) return false;
 	return true;
 }
@@ -104,14 +102,14 @@ bool are_card_equal(Card c1, Card c2) {
  * Get the lowest card of the specified column.
  */
 Card* bottom_card(Board *board, int col) {
-	return &(board->columns[col][board->colen[col] - 1]);
+	return &(board->cascade[col][board->cslen[col] - 1]);
 }
 
 /**
  * Get the highest sorted card we can move from the specified column.
  */
 Card* highest_sorted_card(Board *board, int col) {
-	return &(board->columns[col][board->colen[col] - board->sortdepth[col]]);
+	return &(board->cascade[col][board->cslen[col] - board->sortdepth[col]]);
 }
 
 /**
@@ -127,7 +125,7 @@ CardPosPair search_card(Board *board, Card searched_card) {
 	for (col = 0; col < 4; col++) {
 		if (!are_card_equal(board->freecell[col], searched_card)) continue;
 		cpp.col = col;
-		cpp.row = MAXCOLEN;
+		cpp.row = MAXCSLEN;
 		return cpp;
 	}
 
@@ -135,7 +133,7 @@ CardPosPair search_card(Board *board, Card searched_card) {
 		for (row = 1, card = bottom_card(board, col); !is_nullcard(*card); row++, card--) {
 			if (!are_card_equal(searched_card, *card)) continue;
 			cpp.col = col;
-			cpp.row = board->colen[col] - row;
+			cpp.row = board->cslen[col] - row;
 			return cpp;
 		}
 	}
@@ -180,13 +178,13 @@ void compute_buildfactor(Board *board) {
 		if (is_empty(board, col)) {
 			board->buildfactor[col] = 0;
 		} else if (is_fully_sorted(board, col)) {
-			board->buildfactor[col] = board->columns[col][1].value * MAXCOLEN + board->colen[col];
+			board->buildfactor[col] = board->cascade[col][1].rank * MAXCSLEN + board->cslen[col];
 		} else {
-			board->buildfactor[col] = -board->colen[col];
+			board->buildfactor[col] = -board->cslen[col];
 			highcard = highest_sorted_card(board, col);
 			for (card = highcard; !is_nullcard(*card); card--) {
-				if (card->value < highcard->value) {
-					board->buildfactor[col] -= (highcard->value - card->value);
+				if (card->rank < highcard->rank) {
+					board->buildfactor[col] -= (highcard->rank - card->rank);
 				} else {
 					highcard = card;
 				}
@@ -217,21 +215,21 @@ void board_init(Board *board) {
 	int col;
 	Card newcard;
 
-	nullcard.value = 0;
-	nullcard.symbol = 0;
+	nullcard.rank = 0;
+	nullcard.suit = 0;
 	nullcard.color = 0;
 	nullcard._padding = 0;
 
 	memset(board, 0, sizeof(Board));
 
 	for (col = 0; col < 8; col++) {
-		board->columns[col][0] = nullcard;
-		board->colen[col] = 1;
+		board->cascade[col][0] = nullcard;
+		board->cslen[col] = 1;
 	}
 	for (col = 0; col < 4; col++) {
 		newcard.color = col / 2;
-		newcard.symbol = col % 2;
-		newcard.value = 0;
+		newcard.suit = col % 2;
+		newcard.rank = 0;
 		board->foundation[col][0] = newcard;
 		board->fdlen[col] = 1;
 	}
@@ -251,8 +249,8 @@ void board_deal(Board *board) {
 		for (symbol = 0; symbol < 2; symbol++) {
 			for (value = 1; value < 14; value++) {
 				newcard.color = color;
-				newcard.symbol = symbol;
-				newcard.value = value;
+				newcard.suit = symbol;
+				newcard.rank = value;
 				newcard._padding = 0;
 				deck[(color * 2 + symbol) * 13 + value - 1] = newcard;
 			}
@@ -263,19 +261,19 @@ void board_deal(Board *board) {
 	// Assign each card to a column
 	for (row = 1; row < 7; row++) {
 		for (col = 0; col < 8; col++) {
-			board->columns[col][row] = deck[(row - 1)* 8 + col];
+			board->cascade[col][row] = deck[(row - 1)* 8 + col];
 		}
 	}
 	for (col = 0; col < 4; col++) {
-		board->columns[col][row] = deck[48 + col];
-		board->colen[col] = 8;
+		board->cascade[col][row] = deck[48 + col];
+		board->cslen[col] = 8;
 	}
 	for (col = 4; col < 8; col++) {
-		board->colen[col] = 7;
+		board->cslen[col] = 7;
 	}
-	for (row = 8; row < MAXCOLEN; row++) {
+	for (row = 8; row < MAXCSLEN; row++) {
 		for (col = 0; col < 8; col++) {
-			board->columns[col][row] = nullcard;
+			board->cascade[col][row] = nullcard;
 		}
 	}
 }
@@ -292,12 +290,12 @@ void board_load(Board *board, const char *pathname) {
 	fd = open(pathname, O_RDONLY);
 	assert(fd > 2);
 	newcard._padding = 0;
-	for (row = 1; row < MAXCOLEN; row++) {
+	for (row = 1; row < MAXCSLEN; row++) {
 		if (!read(fd, line, 32)) break;
 		for (col = 0; col < 8; col++) {
 			switch (line[col * 4 + 1]) {
-				case ' ': newcard.value = nullcard.value; break;
-				case '1': newcard.value = 1; break;
+				case ' ': newcard.rank = nullcard.rank; break;
+				case '1': newcard.rank = 1; break;
 				case 'A':
 				case '2':
 				case '3':
@@ -306,50 +304,50 @@ void board_load(Board *board, const char *pathname) {
 				case '6':
 				case '7':
 				case '8':
-				case '9': newcard.value = line[col * 4 + 1] - '0'; break;
-				case '0': newcard.value = 10; break;
-				case 'J': newcard.value = 11; break;
-				case 'Q': newcard.value = 12; break;
-				case 'K': newcard.value = 13; break;
+				case '9': newcard.rank = line[col * 4 + 1] - '0'; break;
+				case '0': newcard.rank = 10; break;
+				case 'J': newcard.rank = 11; break;
+				case 'Q': newcard.rank = 12; break;
+				case 'K': newcard.rank = 13; break;
 				default: assert(0);
 			}
 			switch (line[col * 4 + 2]) {
-				case ' ': newcard.color = nullcard.color; newcard.symbol = nullcard.symbol; break;
-				case 'S': newcard.color = 0; newcard.symbol = 0; break;
-				case 'C': newcard.color = 0; newcard.symbol = 1; break;
-				case 'H': newcard.color = 1; newcard.symbol = 0; break;
-				case 'D': newcard.color = 1; newcard.symbol = 1; break;
+				case ' ': newcard.color = nullcard.color; newcard.suit = nullcard.suit; break;
+				case 'S': newcard.color = 0; newcard.suit = 0; break;
+				case 'C': newcard.color = 0; newcard.suit = 1; break;
+				case 'H': newcard.color = 1; newcard.suit = 0; break;
+				case 'D': newcard.color = 1; newcard.suit = 1; break;
 				default: assert(0);
 			}
 			if (!is_nullcard(newcard)) {
 				assert(depth[col] == row);
 				depth[col]++;
 			}
-			board->columns[col][row] = newcard;
+			board->cascade[col][row] = newcard;
 		}
 	}
 	assert(close(fd) == 0);
 	for (col = 0; col < 8; col++) {
-		board->colen[col] = depth[col];
+		board->cslen[col] = depth[col];
 	}
 }
 
 void setcardstr(Card card, char *cardstr) {
 	cardstr[0] = ' ';
-	if (card.value == 0) {
+	if (card.rank == 0) {
 		cardstr[1] = cardstr[2] = ' ';
 		return;
 	}
 
-	switch (card.value) {
+	switch (card.rank) {
 		case 10: cardstr[0] = '1'; cardstr[1] = '0'; break;
 		case 11: cardstr[1] = 'J'; break;
 		case 12: cardstr[1] = 'Q'; break;
 		case 13: cardstr[1] = 'K'; break;
-		default: cardstr[1] = '0' + (char) card.value;
+		default: cardstr[1] = '0' + (char) card.rank;
 	}
 
-	switch (card.color * 2 + card.symbol) {
+	switch (card.color * 2 + card.suit) {
 		case 0: cardstr[2] = 'S'; break;
 		case 1: cardstr[2] = 'C'; break;
 		case 2: cardstr[2] = 'H'; break;
@@ -360,16 +358,16 @@ void setcardstr(Card card, char *cardstr) {
 }
 
 void setmovestr(Board *board, Card *fromcard, Card *tocard, char *movestr) {
-	if (fromcard >= (Card*) board->columns) {
-		movestr[0] = '1' + ((fromcard - (Card*) board->columns) / MAXCOLEN);
+	if (fromcard >= (Card*) board->cascade) {
+		movestr[0] = '1' + ((fromcard - (Card*) board->cascade) / MAXCSLEN);
 	} else if (fromcard >= (Card*) board->foundation) {
 		assert(0);  // Cannot move from foundation
 	} else {
 		movestr[0] = 'a' + ((fromcard - (Card*) board->freecell));
 	}
 
-	if (tocard >= (Card*) board->columns) {
-		movestr[1] = '1' + ((tocard - (Card*) board->columns) / MAXCOLEN);
+	if (tocard >= (Card*) board->cascade) {
+		movestr[1] = '1' + ((tocard - (Card*) board->cascade) / MAXCSLEN);
 	} else if (tocard >= (Card*) board->foundation) {
 		movestr[1] = 'h';
 	} else {
@@ -396,11 +394,11 @@ void board_show(Board *board) {
 		printf(" %s", cardstr);
 	}
 	printf("\n---------------------------------\n");
-	for (row = 0; row < MAXCOLEN; row++) {
+	for (row = 0; row < MAXCSLEN; row++) {
 		all_nullcard = true;
 		for (col = 0; col < 8; col++) {
-			all_nullcard &= is_nullcard(board->columns[col][row]);
-			setcardstr(board->columns[col][row], cardstr);
+			all_nullcard &= is_nullcard(board->cascade[col][row]);
+			setcardstr(board->cascade[col][row], cardstr);
 			printf(" %s", cardstr);
 		}
 		printf("\n");
@@ -413,15 +411,15 @@ void board_show(Board *board) {
  */
 void move(Board *board, Card *card1, Card *card2) {
 	// Update depth of column and of foundation
-	if (card1 >= (Card*) board->columns) {
-		board->colen[(card1 - (Card*) board->columns) / MAXCOLEN]--;
+	if (card1 >= (Card*) board->cascade) {
+		board->cslen[(card1 - (Card*) board->cascade) / MAXCSLEN]--;
 	} else if (card1 >= (Card*) board->foundation) {
 		board->fdlen[(card1 - (Card*) board->foundation) / MAXFDLEN]--;
 	} else {
 	}
 
-	if (card2 >= (Card*) board->columns) {
-		board->colen[(card2 - (Card*) board->columns) / MAXCOLEN]++;
+	if (card2 >= (Card*) board->cascade) {
+		board->cslen[(card2 - (Card*) board->cascade) / MAXCSLEN]++;
 	} else if (card2 >= (Card*) board->foundation) {
 		board->fdlen[(card2 - (Card*) board->foundation) / MAXFDLEN]++;
 	} else {
@@ -439,7 +437,7 @@ void humanmove(Board *board, int fromcol, int tocol) {
 	if (fromcol >= 10) fromcard = &(board->freecell[fromcol - 10]);
 	else fromcard = bottom_card(board, fromcol - 1);
 
-	suit = fromcard->color * 2 + fromcard->symbol;
+	suit = fromcard->color * 2 + fromcard->suit;
 	if (tocol == 0) tocard = &(board->foundation[suit][board->fdlen[suit]]);
 	else if (tocol >= 10) tocard = &(board->freecell[tocol-10]);
 	else tocard = bottom_card(board, tocol - 1) + 1;
@@ -454,13 +452,13 @@ int supermove_depth(Board *board, int fromcol, int tocol) {
 	highcard = highest_sorted_card(board, fromcol);
 	tocard = bottom_card(board, tocol);
 
-	if (highcard->value < tocard->value - 1) return 0;
-	if (fromcard->value > tocard->value - 1) return 0;
+	if (highcard->rank < tocard->rank - 1) return 0;
+	if (fromcard->rank > tocard->rank - 1) return 0;
 	if (tocard->color == highcard->color) {
-		   if ((tocard->value & 1) != (highcard->value & 1)) return 0;
-	} else if ((tocard->value & 1) == (highcard->value & 1)) return 0;
+		   if ((tocard->rank & 1) != (highcard->rank & 1)) return 0;
+	} else if ((tocard->rank & 1) == (highcard->rank & 1)) return 0;
 
-	return tocard->value - fromcard->value;
+	return tocard->rank - fromcard->rank;
 }
 
 
@@ -610,13 +608,13 @@ bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empt
 	empty_cols_cnt=0;
 	for (tocol = 0; tocol < 8; tocol++)
 		if (is_empty(board, tocol))
-			empty_cols[empty_cols_cnt++] = &board->columns[tocol][1];
+			empty_cols[empty_cols_cnt++] = &board->cascade[tocol][1];
 	freecell_cnt=0;
 	for (tocol = 0; tocol < 4; tocol++)
 		if (is_nullcard(board->freecell[tocol]))
 			freecells[freecell_cnt++] = &board->freecell[tocol];
 
-	row = board->colen[cpp.col] - 1;
+	row = board->cslen[cpp.col] - 1;
 	CONTINUE:;
 	while (row > cpp.row) {
 		// Supermove to another column
@@ -642,7 +640,7 @@ bool superaccess(Board *board, CardPosPair cpp, Stack * nextmoves, bool use_empt
 		}
 
 		// Stack on a freecell or (in last resort) an empty column
-		fromcard = &board->columns[cpp.col][row];
+		fromcard = &board->cascade[cpp.col][row];
 		if (freecell_cnt || (use_empty && empty_cols_cnt)) {
 			tocard = freecell_cnt ? freecells[--freecell_cnt] : empty_cols[--empty_cols_cnt];
 			assert(stack_push(nextmoves, fromcard) == CC_OK);

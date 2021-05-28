@@ -32,7 +32,7 @@
  * value + 1" card.
  */
 bool respect_rule_of_two(Board *board, Card fromcard) {
-	return fromcard.value <= MIN(
+	return fromcard.rank <= MIN(
 		board->fdlen[(1 - fromcard.color) * 2 + 0],
 		board->fdlen[(1 - fromcard.color) * 2 + 1]
 	) + 1;  // +2 but there is a nullcard on top
@@ -62,8 +62,8 @@ int comp_highest_sorted_card(const void *p1, const void *p2, const void *arg) {
 	board = (Board*) arg;
 	col1 = *((int*)p1);
 	col2 = *((int*)p2);
-	card_value1 = col1 >= 0 ? highest_sorted_card(board, col1)->value : board->freecell[col1 + 4].value;
-	card_value2 = col2 >= 0 ? highest_sorted_card(board, col2)->value : board->freecell[col2 + 4].value;
+	card_value1 = col1 >= 0 ? highest_sorted_card(board, col1)->rank : board->freecell[col1 + 4].rank;
+	card_value2 = col2 >= 0 ? highest_sorted_card(board, col2)->rank : board->freecell[col2 + 4].rank;
 
 	if (card_value1 > card_value2)
 		return 1;
@@ -96,9 +96,9 @@ int comp_collen(const void *p1, const void *p2, const void *arg) {
 	col2 = *((int*)p2);
 	board = (Board*) arg;
 
-	if (board->colen[col1] > board->colen[col2])
+	if (board->cslen[col1] > board->cslen[col2])
 		return 1;
-	else if (board->colen[col1] > board->colen[col2])
+	else if (board->cslen[col1] > board->cslen[col2])
 		return -1;
 	return 0;
 }
@@ -115,9 +115,9 @@ void strat_rule_of_two(Board *board, Goal *goal) {
 	// From freecell to foundation
 	for (fromcol = 0; fromcol < 4; fromcol++) {
 		fromcard = &(board->freecell[fromcol]);
-		symbol = fromcard->color * 2 + fromcard->symbol;
+		symbol = fromcard->color * 2 + fromcard->suit;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
-		if (is_move_valid(*fromcard, *tocard, 'f') && respect_rule_of_two(board, *fromcard)) {
+		if (is_move_valid(*fromcard, *tocard, 'h') && respect_rule_of_two(board, *fromcard)) {
 			assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
 			assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
 			move(board, fromcard, tocard + 1);
@@ -127,9 +127,9 @@ void strat_rule_of_two(Board *board, Goal *goal) {
 	// From column to foundation
 	for (fromcol = 0; fromcol < 8; fromcol++) {
 		fromcard = bottom_card(board, fromcol);
-		symbol = fromcard->color * 2 + fromcard->symbol;
+		symbol = fromcard->color * 2 + fromcard->suit;
 		tocard = &(board->foundation[symbol][board->fdlen[symbol] - 1]);
-		if (is_move_valid(*fromcard, *tocard, 'f') && respect_rule_of_two(board, *fromcard)) {
+		if (is_move_valid(*fromcard, *tocard, 'h') && respect_rule_of_two(board, *fromcard)) {
 			assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
 			assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
 			move(board, fromcard, tocard + 1);
@@ -244,29 +244,29 @@ void strat_build_empty(Board *board, Goal *goal) {
  * Find a card that is low and destruct the column to access it
  */
 void strat_access_low_card(Board *board, Goal *goal) {
-	int i, suit;
-	int suits[4] = {0, 1, 2, 3};
+	int i, symbol;
+	int symbols[4] = {0, 1, 2, 3};
 	Card low_card, *card;
 	CardPosPair cpp;
 
-	isort_r(suits, 4, sizeof(int), comp_fdlen, board);
+	isort_r(symbols, 4, sizeof(int), comp_fdlen, board);
 
 	for (i = goal->a; i < 4; i++) {  // i = 0
-		suit = suits[i];
-		low_card.color = (suit & 0b10) > 1;
-		low_card.symbol = suit & 0b01;
-		low_card.value = board->fdlen[suit];
+		symbol = symbols[i];
+		low_card.color = (symbol & 0b10) > 1;
+		low_card.suit = symbol & 0b01;
+		low_card.rank = board->fdlen[symbol];
 
-		if (low_card.value == KING + 1)
+		if (low_card.rank == KING + 1)
 			continue;
 
 		cpp = search_card(board, low_card);
 
 		// Low card found on freecell, from freecell to foundation
-		if (cpp.row == MAXCOLEN) {  // Awful hack
+		if (cpp.row == MAXCSLEN) {  // Awful hack
 			stack_push(goal->nextmoves, &board->freecell[cpp.col]);
-			stack_push(goal->nextmoves, &board->foundation[suit][board->fdlen[suit]]);
-			move(board, &board->freecell[cpp.col], &board->foundation[suit][board->fdlen[suit]]);
+			stack_push(goal->nextmoves, &board->foundation[symbol][board->fdlen[symbol]]);
+			move(board, &board->freecell[cpp.col], &board->foundation[symbol][board->fdlen[symbol]]);
 			goal->strat = STRAT_ACCESS_LOW_CARD;
 			goal->a = i + 1;
 			return;
@@ -277,8 +277,8 @@ void strat_access_low_card(Board *board, Goal *goal) {
 
 		// Low card found at bottom of column, from column to foundation
 		stack_push(goal->nextmoves, bottom_card(board, cpp.col));
-		stack_push(goal->nextmoves, &board->foundation[suit][board->fdlen[suit]]);
-		move(board, bottom_card(board, cpp.col), &board->foundation[suit][board->fdlen[suit]]);
+		stack_push(goal->nextmoves, &board->foundation[symbol][board->fdlen[symbol]]);
+		move(board, bottom_card(board, cpp.col), &board->foundation[symbol][board->fdlen[symbol]]);
 		goal->strat = STRAT_ACCESS_LOW_CARD;
 		goal->a = i + 1;
 		return;
@@ -307,17 +307,17 @@ void strat_access_build_card(Board *board, Goal *goal) {
 		tocard = bottom_card(board, tocol);
 
 		// ...search for a card that can be moved at the bottom
-		build_card.value = tocard->value - 1;
+		build_card.rank = tocard->rank - 1;
 		build_card.color = 1 - tocard->color;
 		for (s = goal->b; s < 2; s++) {  // // s = 0
-			build_card.symbol = s;
-			suit = build_card.color * 2 + build_card.symbol;
-			if (build_card.value <= board->fdlen[suit]) continue;  // card is on the foundation already
+			build_card.suit = s;
+			suit = build_card.color * 2 + build_card.suit;
+			if (build_card.rank <= board->fdlen[suit]) continue;  // card is on the foundation already
 			cpp = search_card(board, build_card);
 
 			// If the card is movable right away then STRAT_BUILD_DOWN already did search it
-			if (cpp.row == MAXCOLEN) continue;
-			if (cpp.row >= board->colen[cpp.col] - board->sortdepth[cpp.col]) continue;
+			if (cpp.row == MAXCSLEN) continue;
+			if (cpp.row >= board->cslen[cpp.col] - board->sortdepth[cpp.col]) continue;
 
 			// Spread cards around until ours is accessible
 			if (!superaccess(board, cpp, goal->nextmoves, true)) continue;
@@ -351,7 +351,7 @@ void strat_access_empty(Board *board, Goal *goal) {
 		cpp.row = 0;
 		cpp.col = columns[i];
 
-		if (is_fully_sorted(board, cpp.col) && board->colen[cpp.col] > 4) continue;
+		if (is_fully_sorted(board, cpp.col) && board->cslen[cpp.col] > 4) continue;
 		if (!superaccess(board, cpp, goal->nextmoves, false)) continue;
 
 		goal->strat = STRAT_ACCESS_EMPTY;
@@ -405,9 +405,9 @@ void strat_any_move_foundation(Board *board, Goal *goal) {
 
 	for (fromcol = goal->a; fromcol < 8; fromcol++) {  // fromcol = 0
 		fromcard = fromcol < 0 ? &board->freecell[fromcol + 4] : bottom_card(board, fromcol);
-		suit = fromcard->color * 2 + fromcard->symbol;
+		suit = fromcard->color * 2 + fromcard->suit;
 		tocard = &board->foundation[suit][board->fdlen[suit] - 1];
-		if (!is_move_valid(*fromcard, *tocard, 'f')) continue;
+		if (!is_move_valid(*fromcard, *tocard, 'h')) continue;
 
 		assert(stack_push(goal->nextmoves, fromcard) == CC_OK);
 		assert(stack_push(goal->nextmoves, tocard + 1) == CC_OK);
@@ -427,7 +427,7 @@ void strat_any_move_freecell(Board *board, Goal *goal) {
 	freecell_cnt=0;
 	for (fromcol = 0; fromcol < 8; fromcol++)
 		if (is_empty(board, fromcol))
-			freecells[freecell_cnt++] = &board->columns[fromcol][1];
+			freecells[freecell_cnt++] = &board->cascade[fromcol][1];
 	for (fromcol = 0; fromcol < 4; fromcol++)
 		if (is_nullcard(board->freecell[fromcol]))
 			freecells[freecell_cnt++] = &board->freecell[fromcol];

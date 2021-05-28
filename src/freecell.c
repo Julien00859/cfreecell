@@ -211,10 +211,10 @@ int main(int argc, char *argv[]) {
 				move(&board, tocard, fromcard);
 				setcardstr(*fromcard, fromcardstr);
 				if (tocard < (Card*)board.foundation) {
-					assert(is_move_valid(*fromcard, *tocard, 'l'));
+					assert(is_move_valid(*fromcard, *tocard, 'f'));
 					setcardstr(*tocard, tocardstr);
-				} else if (tocard < (Card*)board.columns) {
-					assert(is_move_valid(*fromcard, *(tocard - 1), 'f'));
+				} else if (tocard < (Card*)board.cascade) {
+					assert(is_move_valid(*fromcard, *(tocard - 1), 'h'));
 					setcardstr(*(tocard - 1), tocardstr);
 				} else {
 					assert(is_move_valid(*fromcard, *(tocard - 1), 'c'));

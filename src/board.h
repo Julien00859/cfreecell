@@ -10,7 +10,7 @@
 
 #define KING 13
 #define MAXFDLEN 14
-#define MAXCOLEN 22
+#define MAXCSLEN 20
 
 /**
  * Immutable card, there are 52 + the nullcard
@@ -18,8 +18,8 @@
 typedef struct card {
 	uint8_t _padding:2;
 	uint8_t color:1;
-	uint8_t symbol:1;
-	uint8_t value:4;
+	uint8_t suit:1;
+	uint8_t rank:4;
 } Card;
 
 /**
@@ -28,9 +28,9 @@ typedef struct card {
 typedef struct board {
 	Card freecell[4];
 	Card foundation[4][MAXFDLEN];
-	Card columns[8][MAXCOLEN];
+	Card cascade[8][MAXCSLEN];
 	uint8_t fdlen[4];
-	uint8_t colen[8];
+	uint8_t cslen[8];
 
 	// Properties, must be recalculated after each move
 	uint8_t sortdepth[8];
